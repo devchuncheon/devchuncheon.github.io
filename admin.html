@@ -300,7 +300,7 @@ function admins() {
     clear(); header('직원 관리');
     var id = input('text', '아이디 (영문·숫자)'), nm = input('text', '이름'), pc = permChips(r.perms, []), err = el('p', 'err');
     app.appendChild(card(el('h1', '', '직원 등록'), el('label', '', '아이디'), id, el('label', '', '이름'), nm, el('label', '', '맡길 일'), pc,
-      btn('등록하고 주소 만들기', function () {
+      btn('등록하고 개인 접속 주소 만들기', function () {
         api('addAdmin', { id: id.value, name: nm.value, perms: pc.value() }, function (x) {
           shown('등록했습니다', [['개인 주소', x.link], ['아이디', x.id], ['임시 비밀번호', x.temp]]);
         }, err);
