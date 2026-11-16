@@ -64,6 +64,8 @@ label { font-size: 15px; color: #3e4c59; }
 #map { height: 400px; border-radius: 12px; margin: 8px 0; background: #e8ece9; }
 .pin { background: #1f7a4d; color: #fff; border-radius: 50%; width: 30px; height: 30px; line-height: 26px; text-align: center; font-size: 11px; font-weight: 700; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
 .pin.x { background: #534ab7; border-radius: 7px; }
+.askbg { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.askbox { background: #fff; border-radius: 14px; padding: 16px; width: 100%; max-width: 420px; white-space: pre-line; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 </style>
 </head>
 <body>
@@ -284,8 +286,24 @@ function stores() {
 var CHUN = [37.8813, 127.7298];
 var MAP = null;
 function noEx(t) { return String(t || '').replace(/^\(예시\)\s*/, ''); }
+function dropMap() { if (MAP) { MAP.remove(); MAP = null; } }
+
+/* 화면 안 확인 상자 (브라우저 확인 창이 막힌 곳에서도 작동). btns: [[글자, 값, 'red'|'sub'(선택)]] */
+function ask(o, cb) {
+  var bg = el('div', 'askbg'), box = el('div', 'askbox'), inp = null;
+  box.appendChild(el('p', '', o.text));
+  if (o.input !== undefined) { inp = input('text', o.input, o.value || ''); box.appendChild(inp); }
+  var done = function (v) { if (bg.parentNode) bg.parentNode.removeChild(bg); if (v !== null && cb) cb(v, inp ? inp.value : ''); };
+  (o.btns || [['확인', 'ok'], ['취소', null]]).forEach(function (b) {
+    box.appendChild(btn(b[0], function () { done(b[1]); }, b[1] === null ? 'sub' : (b[2] || '')));
+  });
+  if (inp) inp.onkeydown = function (e) { if (e.key === 'Enter') done((o.btns || [['', 'ok']])[0][1]); };
+  bg.appendChild(box); document.body.appendChild(bg);
+  if (inp) setTimeout(function () { inp.focus(); }, 50);
+}
 
 function designList() {
+  dropMap();
   api('dCourses', {}, function (r) {
     clear(); header('코스 설계');
     var c = card(el('h1', '', '코스 목록'), el('p', 'small', '코스를 누르면 지도와 포인트가 열립니다. 새 코스는 설명을 먼저 적고, 지도에서 포인트를 찍어 만듭니다.'));
@@ -301,7 +319,7 @@ function designList() {
 }
 
 function courseForm(c) {
-  if (MAP) { MAP.remove(); MAP = null; }
+  dropMap();
   clear(); header(c ? c.no + '코스' : '새 코스');
   var nm = input('text', '예: 석사천 물길 코스', c ? noEx(c.name) : ''), pu = el('textarea'), de = el('textarea'), err = el('p', 'err');
   pu.placeholder = '이 코스를 만드는 의도와 목표 (예: 물소리를 들으며 천천히 걷는 첫 코스)';
@@ -319,17 +337,18 @@ function courseForm(c) {
 function courseMap(no, keepView) {
   api('dCourse', { no: no }, function (r) {
     var view = keepView && MAP ? { c: MAP.getCenter(), z: MAP.getZoom() } : null;
-    if (MAP) { MAP.remove(); MAP = null; }
+    dropMap();
     clear(); header(r.no + '코스');
     var byNo = {}, inC = {};
     r.all.forEach(function (p) { byNo[p.no] = p; });
     r.points.forEach(function (n, i) { inC[n] = i + 1; });
+    var again = function () { courseMap(r.no, true); };
     app.appendChild(card(el('h1', '', r.no + ' ' + noEx(r.name)),
       el('p', 'small', '단계: ' + r.stage + ' · 포인트 ' + r.points.length + '개' + (r.km ? ' · ' + r.km + 'km' : '') + (r.min ? ' · 약 ' + r.min + '분' : '') + (r.on ? ' · 방문자에게 공개 중' : ' · 방문자에게 숨김')),
       r.purpose ? el('p', 'small', '의도: ' + r.purpose) : null, r.desc ? el('p', 'small', r.desc) : null));
     var md = el('div'); md.id = 'map';
     app.appendChild(card(el('h2', '', '2. 지도에서 포인트 찍기'),
-      el('p', 'small', '지도를 누르면 그 자리에 새 포인트가 생겨 코스 끝에 이어집니다. 회색 점(다른 포인트)을 누르면 그 포인트를 이 코스에 넣을 수 있습니다.'),
+      el('p', 'small', '걷는 순서대로 지도를 누르십시오. 누른 자리에 새 포인트가 생겨 코스 끝에 이어집니다. 회색 점(다른 포인트)을 누르면 그 포인트를 이 코스에 넣을 수 있습니다.'),
       md, el('p', 'small', '초록 = 이 코스 · 보라 네모 = 다른 코스도 지나는 갈림길 · 회색 = 다른 포인트')));
     if (typeof L === 'undefined') md.textContent = '지도를 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 열어 주십시오.';
     else {
@@ -338,7 +357,12 @@ function courseMap(no, keepView) {
       var line = [];
       r.points.forEach(function (n) { var p = byNo[n]; if (p && p.lat !== null) line.push([p.lat, p.lng]); });
       if (line.length > 1) L.polyline(line, { color: '#1f7a4d', weight: 5, opacity: 0.85 }).addTo(MAP);
-      var addPt = function (o) { o.course = r.no; api('dAddPoint', o, function () { courseMap(r.no, true); }); };
+      var addPt = function (o) { o.course = r.no; api('dAddPoint', o, again); };
+      var askName = function (lat, lng) {
+        ask({ text: '새 포인트 이름을 적어 주십시오.\n비워 두고 나중에 적어도 됩니다.', input: '예: 석사천 징검다리', btns: [['포인트 만들기', 'ok'], ['취소', null]] }, function (v, name) {
+          addPt({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), name: name });
+        });
+      };
       r.all.forEach(function (p) {
         if (p.lat === null || p.lng === null) return;
         if (inC[p.no]) {
@@ -346,9 +370,12 @@ function courseMap(no, keepView) {
           var ic = L.divIcon({ className: '', html: '<div class="pin' + (cross ? ' x' : '') + '">' + p.no + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
           L.marker([p.lat, p.lng], { icon: ic }).addTo(MAP).bindTooltip(inC[p.no] + '번째 · ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)') + (cross ? ' · 갈림길 ' + p.courses.join('·') : ''));
         } else if (p.stage !== '꺼짐') {
-          var cm = L.circleMarker([p.lat, p.lng], { radius: 8, color: '#6b7280', weight: 2, fillColor: '#d1d5db', fillOpacity: 0.9 }).addTo(MAP);
+          var cm = L.circleMarker([p.lat, p.lng], { radius: 9, color: '#6b7280', weight: 2, fillColor: '#d1d5db', fillOpacity: 0.9 }).addTo(MAP);
           cm.bindTooltip(p.no + ' ' + (noEx(p.name) || '(이름 없음)') + (p.courses.length ? ' · ' + p.courses.join('·') + '코스' : ''));
-          cm.on('click', function () { if (confirm(p.no + ' ' + (noEx(p.name) || '') + ' 포인트를 ' + r.no + '코스 끝에 넣을까요?')) addPt({ use: p.no }); });
+          cm.on('click', function (e) {
+            if (e && e.originalEvent) L.DomEvent.stopPropagation(e);
+            ask({ text: p.no + ' ' + (noEx(p.name) || '') + ' 포인트를 ' + r.no + '코스 끝에 넣을까요?', btns: [['넣기', 'ok'], ['취소', null]] }, function () { addPt({ use: p.no }); });
+          });
         }
       });
       if (view) MAP.setView(view.c, view.z);
@@ -362,11 +389,13 @@ function courseMap(no, keepView) {
           var d = MAP.distance([lat, lng], [p.lat, p.lng]);
           if (d <= best) { best = d; near = p; }
         });
-        if (near && inC[near.no]) { if (!confirm('30m 안에 이 코스의 ' + near.no + ' 포인트가 있습니다. 그래도 새 포인트를 만들까요?')) return; }
-        else if (near) { if (confirm('30m 안에 ' + near.no + ' ' + (noEx(near.name) || '') + ' 포인트가 이미 있습니다. 이 포인트를 쓸까요?\n(취소를 누르면 새 포인트를 만듭니다)')) { addPt({ use: near.no }); return; } }
-        var nm = prompt('새 포인트 이름 (비워도 되고, 나중에 고칠 수 있습니다)', '');
-        if (nm === null) return;
-        addPt({ lat: Number(lat.toFixed(6)), lng: Number(lng.toFixed(6)), name: nm });
+        if (near && inC[near.no]) {
+          ask({ text: '30m 안에 이 코스의 ' + near.no + ' 포인트가 있습니다.\n그래도 새 포인트를 만들까요?', btns: [['새로 만들기', 'new'], ['취소', null]] }, function () { askName(lat, lng); });
+        } else if (near) {
+          ask({ text: '30m 안에 ' + near.no + ' ' + (noEx(near.name) || '') + ' 포인트가 이미 있습니다.\n같은 자리라면 이 포인트를 쓰십시오 (QR은 한 자리에 하나).', btns: [['이 포인트 쓰기', 'use'], ['새로 만들기', 'new', 'sub'], ['취소', null]] }, function (v) {
+            if (v === 'use') addPt({ use: near.no }); else askName(lat, lng);
+          });
+        } else askName(lat, lng);
       });
     }
     var lc = card(el('h2', '', '포인트 순서'));
@@ -377,13 +406,16 @@ function courseMap(no, keepView) {
       [['↑', 'up'], ['↓', 'down'], ['빼기', 'remove']].forEach(function (k) {
         var b = el('button', 'sw off', k[0]); b.style.minWidth = '44px';
         b.onclick = function () {
-          if (k[1] === 'remove' && !confirm(n + ' 포인트를 이 코스에서 뺄까요? (포인트는 지도에 회색으로 남습니다)')) return;
-          api('dCoursePoint', { course: r.no, no: n, op: k[1] }, function () { courseMap(r.no, true); });
+          var go = function () { api('dCoursePoint', { course: r.no, no: n, op: k[1] }, again); };
+          if (k[1] === 'remove') ask({ text: n + ' 포인트를 이 코스에서 뺄까요?\n포인트는 지도에 회색으로 남습니다.', btns: [['빼기', 'ok', 'red'], ['취소', null]] }, go);
+          else go();
         };
         bx.appendChild(b);
       });
       var nb = el('button', 'sw off', '이름'); nb.style.minWidth = '44px';
-      nb.onclick = function () { var v = prompt(n + ' 포인트 이름', noEx(p.name)); if (v === null) return; api('dPointName', { no: n, name: v }, function () { courseMap(r.no, true); }); };
+      nb.onclick = function () {
+        ask({ text: n + ' 포인트 이름', input: '예: 석사천 징검다리', value: noEx(p.name), btns: [['저장', 'ok'], ['취소', null]] }, function (v, name) { api('dPointName', { no: n, name: name }, again); });
+      };
       bx.appendChild(nb);
       var sub = (i === 0 ? '시작 · ' : i === r.points.length - 1 ? '마침 · ' : '') + (p.stage || '임시') + (p.courses.length > 1 ? ' · 갈림길(' + p.courses.join('·') + ')' : '') + (p.lat === null ? ' · 위치 없음' : '');
       lc.appendChild(row((i + 1) + '. ' + n + ' ' + (noEx(p.name) || '(이름 없음)'), sub, bx));
@@ -392,16 +424,21 @@ function courseMap(no, keepView) {
     var chips = el('div', 'chips');
     r.stages.forEach(function (s) {
       var ch = el('button', 'chip' + (s === r.stage ? ' sel' : ''), s);
-      ch.onclick = function () { if (s === r.stage) return; if (confirm('코스 단계를 "' + s + '"(으)로 바꿀까요?')) api('dStage', { no: r.no, stage: s }, function () { courseMap(r.no, true); }); };
+      ch.onclick = function () {
+        if (s === r.stage) return;
+        ask({ text: '코스 단계를 "' + s + '"(으)로 바꿀까요?', btns: [['바꾸기', 'ok'], ['취소', null]] }, function () { api('dStage', { no: r.no, stage: s }, again); });
+      };
       chips.appendChild(ch);
     });
     app.appendChild(card(el('h2', '', '코스 단계'), el('p', 'small', '확인한 뒤 손으로 넘깁니다. 방문자에게 보이는 것은 "코스 공개·숨김"에서 따로 정합니다.'), chips));
     app.appendChild(btn('코스 설명 고치기', function () { courseForm(r); }, 'sub'));
     app.appendChild(btn('이 코스 삭제', function () {
-      if (confirm(r.no + '코스를 삭제할까요?\n코스와 그 길이 지워지고, 이 코스에만 있던 임시 포인트는 꺼집니다. 되돌릴 수 없습니다.')) api('dDelCourse', { no: r.no }, function () { if (MAP) { MAP.remove(); MAP = null; } alert('삭제했습니다.'); designList(); });
+      ask({ text: r.no + '코스를 삭제할까요?\n코스와 그 길이 지워지고, 이 코스에만 있던 임시 포인트는 꺼집니다. 되돌릴 수 없습니다.', btns: [['삭제', 'ok', 'red'], ['취소', null]] }, function () {
+        api('dDelCourse', { no: r.no }, function () { dropMap(); designList(); });
+      });
     }, 'red'));
-    app.appendChild(btn('코스 목록으로', function () { if (MAP) { MAP.remove(); MAP = null; } designList(); }, 'sub'));
-    app.appendChild(btn('관리 첫 화면으로', function () { if (MAP) { MAP.remove(); MAP = null; } home(); }, 'sub'));
+    app.appendChild(btn('코스 목록으로', designList, 'sub'));
+    app.appendChild(btn('관리 첫 화면으로', function () { dropMap(); home(); }, 'sub'));
     setTimeout(function () { if (MAP) MAP.invalidateSize(); }, 300);
   });
 }
