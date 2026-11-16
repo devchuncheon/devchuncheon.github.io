@@ -5,6 +5,12 @@
 (function () {
   var CFG = window.WALK_CONFIG || {};
 
+  /* 관리자 개인 주소(?adm=)로 첫 화면에 들어오면 관리자 화면으로 보냄 */
+  if (/[?&]adm=/.test(location.search) && !/admin\.html$/.test(location.pathname)) {
+    location.replace('admin.html' + location.search);
+    return;
+  }
+
   function post(fn, args, ok, fail) {
     var ctl = ('AbortController' in window) ? new AbortController() : null;
     var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 40000);
