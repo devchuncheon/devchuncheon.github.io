@@ -79,7 +79,7 @@ function clear() { app.innerHTML = ''; window.scrollTo(0, 0); }
 function busy(on) { document.getElementById('busy').style.display = on ? 'block' : 'none'; var bs = document.querySelectorAll('button'); for (var i = 0; i < bs.length; i++) bs[i].disabled = !!on; }
 function header(title) {
   var t = el('div', 'top', null, el('div', 't', title || '걸어서 춘천 관리'));
-  if (ME) t.appendChild(el('div', 'w', ME.name + ' (' + (ME.role === '마스터' ? '마스터' : '관리자') + ')'));
+  if (ME) t.appendChild(el('div', 'w', ME.name + ' (' + (ME.role === '대표' ? '대표' : '직원') + ')'));
   app.appendChild(t);
 }
 function backBtn() { return btn('관리 첫 화면으로', home, 'sub'); }
@@ -104,19 +104,19 @@ function run(fn, args, ok, errBox) {
 }
 function api(action, args, ok, errBox) { run('adminApi', [LINK, store(KEY), action, args || {}], ok, errBox); }
 
-/* 처음 마스터 만들기 (?a=setup) */
+/* 처음 대표 만들기 (?a=setup) */
 function setup() {
-  clear(); header('마스터 관리자 만들기');
+  clear(); header('대표 만들기');
   var code = input('text', '설정 코드'), id = input('text', '아이디 (영문·숫자)'), nm = input('text', '이름'), pw = input('password', '비밀번호 (8자 이상)'), pw2 = input('password', '비밀번호 한 번 더');
   var err = el('p', 'err');
-  app.appendChild(card(el('p', 'small', '스프레드시트 설정 시트의 "관리자설정코드"를 넣고, 마스터 관리자의 아이디와 비밀번호를 정해 주십시오. 한 번만 할 수 있습니다.'),
+  app.appendChild(card(el('p', 'small', '스프레드시트 설정 시트의 "관리자설정코드"를 넣고, 대표의 아이디와 비밀번호를 정해 주십시오. 한 번만 할 수 있습니다.'),
     el('label', '', '설정 코드'), code, el('label', '', '아이디'), id, el('label', '', '이름'), nm, el('label', '', '비밀번호'), pw, pw2,
-    btn('마스터 관리자 만들기', function () {
+    btn('대표 만들기', function () {
       err.textContent = '';
       if (pw.value !== pw2.value) { err.textContent = '두 비밀번호가 다릅니다.'; return; }
       run('adminSetup', [code.value, id.value, nm.value, pw.value], function (r) {
-        clear(); header('마스터 관리자 만들기');
-        app.appendChild(card(el('h1', '', '만들었습니다'), el('p', '', '아래가 마스터 관리자 전용 주소입니다. 휴대폰 홈 화면에 추가하거나 따로 적어 두십시오. 이 주소로 들어가 아이디와 비밀번호로 로그인합니다.'),
+        clear(); header('대표 만들기');
+        app.appendChild(card(el('h1', '', '만들었습니다'), el('p', '', '아래가 대표 전용 주소입니다. 휴대폰 홈 화면에 추가하거나 따로 적어 두십시오. 이 주소로 들어가 아이디와 비밀번호로 로그인합니다.'),
           el('div', 'copy', r.link), btn('이 주소로 가기', function () { window.open(r.link, '_top'); })));
       }, err);
     }), err));
@@ -142,22 +142,34 @@ function changePw(first) {
   clear(); header();
   var pw = input('password', '새 비밀번호 (8자 이상)'), pw2 = input('password', '새 비밀번호 한 번 더'), err = el('p', 'err');
   app.appendChild(card(el('h1', '', first ? '처음 로그인: 비밀번호 바꾸기' : '비밀번호 바꾸기'),
-    first ? el('p', 'small', '마스터 관리자에게 받은 임시 비밀번호를 본인만 아는 비밀번호로 바꿔 주십시오.') : null,
+    first ? el('p', 'small', '대표에게 받은 임시 비밀번호를 본인만 아는 비밀번호로 바꿔 주십시오.') : null,
     pw, pw2, btn('바꾸기', function () {
       if (pw.value !== pw2.value) { err.textContent = '두 비밀번호가 다릅니다.'; return; }
       api('changePw', { pw: pw.value }, function () { alert('비밀번호를 바꿨습니다.'); home(); }, err);
     }), err, first ? null : backBtn()));
 }
 
-/* 관리 첫 화면 */
+/* 관리 첫 화면: 큰 단추 6개 (2026-11-16, 기획 원본 슬라이드 순서) */
 var TILES = [
-  { k: '공지', ic: '📢', t: '공지·길 통제', fn: function () { notice(); } },
-  { k: '포인트', ic: '📍', t: '포인트·QR', fn: function () { points(); } },
-  { k: '코스', ic: '🗺️', t: '코스 공개', fn: function () { courses(); } },
-  { k: '선물처', ic: '🎁', t: '선물처', fn: function () { stores(); } },
-  { k: '관리자', ic: '👥', t: '관리자 관리', fn: function () { admins(); } }
+  { k: '코스', ic: '🗺️', t: '코스 설계', items: [['코스 공개·숨김', function () { courses(); }], ['지도·포인트·단계'], ['코스 미리보기'], ['코스 내보내기']] },
+  { k: '포인트', ic: '📍', t: '포인트', items: [['포인트·QR 켜기·끄기', function () { points(); }], ['포인트 미리보기'], ['선물처·홍보처·휴식처']] },
+  { k: '콘텐츠', ic: '🎬', t: '콘텐츠', items: [['콘텐츠 붙이기'], ['콘텐츠 창고'], ['유튜브 주소 가져오기']] },
+  { k: '답사', ic: '🚶', t: '답사', items: [['답사 시작 (휴대폰)'], ['임시 추가 확정']] },
+  { k: '운영', ic: '🛠️', t: '운영', items: [['긴급공지·길 통제', function () { notice(); }], ['선물처 운영·오늘 마감', function () { stores(); }], ['운영 조건·상황 단추']] },
+  { k: '통계', ic: '📊', t: '통계', items: [['기본 통계'], ['특별 요청'], ['질문 관리']] }
 ];
-var LATER = [['🚶', '답사 모드'], ['🎬', '쇼츠 창고'], ['✍️', '문구 관리'], ['📊', '통계']];
+
+function tileMenu(t) {
+  clear(); header(t.t);
+  var c = card(el('h1', '', t.ic + ' ' + t.t));
+  t.items.forEach(function (x) {
+    var b = el('button', 'b' + (x[1] ? '' : ' sub'), x[0] + (x[1] ? '' : ' (준비 중)'));
+    if (x[1]) b.onclick = x[1]; else b.disabled = true;
+    c.appendChild(b);
+  });
+  app.appendChild(c);
+  app.appendChild(backBtn());
+}
 
 function home() {
   api('home', {}, function (r) {
@@ -171,12 +183,13 @@ function home() {
     app.appendChild(card(el('h2', '', '오늘'), n));
     var g = el('div', 'grid');
     TILES.forEach(function (t) {
-      if (r.perms.indexOf(t.k) < 0) return;
-      var b = el('button', 'tile', null, el('span', 'ic', t.ic), document.createTextNode(t.t));
-      b.onclick = t.fn; g.appendChild(b);
+      var ok = r.perms.indexOf(t.k) >= 0;
+      var b = el('button', 'tile' + (ok ? '' : ' off'), null, el('span', 'ic', t.ic), document.createTextNode(t.t));
+      if (ok) b.onclick = function () { tileMenu(t); };
+      g.appendChild(b);
     });
-    LATER.forEach(function (x) { g.appendChild(el('button', 'tile off', null, el('span', 'ic', x[0]), document.createTextNode(x[1] + ' (준비 중)'))); });
     app.appendChild(g);
+    if (r.perms.indexOf('관리자') >= 0) app.appendChild(btn('👥 직원 관리', function () { admins(); }, 'sub'));
     app.appendChild(btn('비밀번호 바꾸기', function () { changePw(false); }, 'sub'));
     app.appendChild(btn('로그아웃', function () { api('logout', {}, function () { store(KEY, ''); login(''); }); }, 'sub'));
   });
@@ -262,7 +275,7 @@ function stores() {
   });
 }
 
-/* 관리자 관리 (마스터) */
+/* 직원 관리 (대표) */
 function permChips(all, sel) {
   var box = el('div', 'chips'), picked = sel.slice();
   all.forEach(function (p) {
@@ -279,26 +292,26 @@ function shown(title, lines) {
   lines.forEach(function (l) { if (l[0]) c.appendChild(el('label', '', l[0])); c.appendChild(el('div', 'copy', l[1])); });
   c.appendChild(el('p', 'small', '임시 비밀번호는 지금 한 번만 보입니다. 주소와 함께 그분께 직접 전해 주십시오. 처음 로그인하면 본인 비밀번호로 바꾸게 됩니다.'));
   c.appendChild(btn('확인', admins));
-  clear(); header('관리자 관리'); app.appendChild(c);
+  clear(); header('직원 관리'); app.appendChild(c);
 }
 
 function admins() {
   api('admins', {}, function (r) {
-    clear(); header('관리자 관리');
+    clear(); header('직원 관리');
     var id = input('text', '아이디 (영문·숫자)'), nm = input('text', '이름'), pc = permChips(r.perms, []), err = el('p', 'err');
-    app.appendChild(card(el('h1', '', '관리자 등록'), el('label', '', '아이디'), id, el('label', '', '이름'), nm, el('label', '', '맡길 일'), pc,
+    app.appendChild(card(el('h1', '', '직원 등록'), el('label', '', '아이디'), id, el('label', '', '이름'), nm, el('label', '', '맡길 일'), pc,
       btn('등록하고 주소 만들기', function () {
         api('addAdmin', { id: id.value, name: nm.value, perms: pc.value() }, function (x) {
-          shown('등록했습니다', [['관리자 주소', x.link], ['아이디', x.id], ['임시 비밀번호', x.temp]]);
+          shown('등록했습니다', [['개인 주소', x.link], ['아이디', x.id], ['임시 비밀번호', x.temp]]);
         }, err);
       }), err));
-    var c = card(el('h1', '', '관리자 목록'));
+    var c = card(el('h1', '', '직원 목록'));
     r.list.forEach(function (m) {
       var box = el('div', 'card');
       box.style.boxShadow = 'none'; box.style.border = '1px solid #e4e7eb';
-      box.appendChild(el('h2', '', m.name + ' (' + m.id + ')' + (m.role === '마스터' ? ' · 마스터' : '')));
+      box.appendChild(el('h2', '', m.name + ' (' + m.id + ')' + (m.role === '대표' ? ' · 대표' : '')));
       box.appendChild(el('p', 'small', '상태: ' + m.state + (m.change ? ' · 비밀번호 아직 안 바꿈' : '') + ' · 마지막 접속: ' + (m.last || '없음')));
-      if (m.role !== '마스터') {
+      if (m.role !== '대표') {
         var pc2 = permChips(r.perms, m.perms);
         box.appendChild(el('label', '', '맡긴 일'));
         box.appendChild(pc2);
@@ -306,7 +319,7 @@ function admins() {
         box.appendChild(m.state === '사용'
           ? btn('사용 중지 (바로 막기)', function () { if (confirm(m.name + '님을 사용 중지할까요? 로그인한 휴대폰도 바로 막힙니다.')) api('editAdmin', { id: m.id, what: 'stop' }, function () { admins(); }); }, 'red')
           : btn('다시 사용', function () { api('editAdmin', { id: m.id, what: 'start' }, function () { admins(); }); }));
-        box.appendChild(btn('주소 새로 만들기 (예전 주소 막기)', function () { if (confirm('예전 주소는 더 이상 열리지 않습니다. 새로 만들까요?')) api('editAdmin', { id: m.id, what: 'link' }, function (x) { shown('새 주소', [['관리자 주소', x.link]]); }); }, 'sub'));
+        box.appendChild(btn('주소 새로 만들기 (예전 주소 막기)', function () { if (confirm('예전 주소는 더 이상 열리지 않습니다. 새로 만들까요?')) api('editAdmin', { id: m.id, what: 'link' }, function (x) { shown('새 주소', [['개인 주소', x.link]]); }); }, 'sub'));
       }
       box.appendChild(btn('임시 비밀번호 새로 주기', function () { if (confirm('비밀번호를 새로 정할까요? 로그인한 휴대폰은 다시 로그인해야 합니다.')) api('editAdmin', { id: m.id, what: 'reset' }, function (x) { if (m.id === ME.id) { store(KEY, ''); } shown('임시 비밀번호', [['아이디', m.id], ['임시 비밀번호', x.temp]]); }); }, 'sub'));
       var u = el('div', 'copy', m.link); u.style.display = 'none';
