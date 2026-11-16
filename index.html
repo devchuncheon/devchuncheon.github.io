@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<base target="_blank">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>걸어서 춘천</title>
+<meta name="theme-color" content="#1f4e3d">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="걸어서 춘천">
+<script src="config.js"></script>
+<script src="gas-shim.js"></script>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif; background: #f3f1ea; color: #1f2933; font-size: 17px; line-height: 1.6; }
+#app { max-width: 480px; margin: 0 auto; padding: 8px 10px 30px; }
+.top { font-size: 14px; color: #52606d; text-align: center; margin: 2px 0 10px; }
+.card { background: #fff; border: 1px solid #d9d4c7; border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+h1 { font-size: 22px; margin: 0 0 8px; color: #1f4e3d; }
+h2 { font-size: 15px; margin: 0 0 6px; color: #52606d; font-weight: 600; }
+p { margin: 0 0 10px; }
+p:last-child { margin-bottom: 0; }
+button, a.btn { display: flex; align-items: center; justify-content: center; width: 100%; height: 56px; padding: 0 12px; font-size: 18px; font-family: inherit; line-height: 1.2; border-radius: 10px; border: 1px solid #1f4e3d; background: #1f4e3d; color: #fff; margin-top: 10px; text-align: center; text-decoration: none; white-space: nowrap; overflow: hidden; box-sizing: border-box; }
+#app > button, #app > a.btn { width: calc(100% - 30px); margin-left: 15px; margin-right: 15px; }
+button.sub, a.btn.sub { background: #fff; color: #1f4e3d; }
+button.pick { background: #fff; color: #1f4e3d; }
+button.pick.on { background: #1f4e3d; color: #fff; }
+a.btn.map { background: #fee500; border-color: #e0c800; color: #191919; }
+a.btn.naver { background: #03c75a; border-color: #03a94d; color: #fff; }
+button:disabled { opacity: .5; }
+input, textarea { width: 100%; font-size: 18px; font-family: inherit; padding: 12px; border: 1px solid #9aa5b1; border-radius: 10px; }
+.note { background: #fff7e0; border: 1px solid #e3c35a; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+.guide { background: #e8f1ec; border: 1px solid #9cc3ad; border-radius: 10px; padding: 12px 14px; margin: 10px 0 0; font-size: 18px; font-weight: 600; color: #1f4e3d; text-align: center; }
+.safe { background: #fdecea; border: 1px solid #e0a39e; border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 15px; }
+.small { font-size: 14px; color: #52606d; }
+.status { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin: 0 0 14px; }
+.status span { background: #fff; border: 1px solid #d9d4c7; border-radius: 20px; padding: 4px 12px; font-size: 14px; }
+.hello { background: #1f4e3d; color: #fff; border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+.hello p { font-size: 19px; font-weight: 600; }
+/* 쇼츠: 단추 폭에 맞추되, 화면 높이를 넘으면 줄여서 단추가 함께 보이게 함 */
+.vbox { position: relative; width: 100%; max-width: calc((100vh - 240px) * 0.5625); min-width: 200px; aspect-ratio: 9 / 16; margin: 0 auto; border-radius: 12px; overflow: hidden; background: #000; }
+.vbox iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.strip { display: flex; gap: 8px; overflow-x: auto; margin: 10px 0; scroll-snap-type: x mandatory; }
+.strip img { flex: 0 0 82%; max-height: 260px; object-fit: cover; border-radius: 10px; scroll-snap-align: start; }
+.strip.one img { flex-basis: 100%; }
+.spot-photo { width: 100%; border-radius: 10px; display: block; margin: 10px 0; }
+.nophoto { background: #efece4; color: #7b8794; border-radius: 10px; text-align: center; padding: 30px 10px; margin: 10px 0; font-size: 14px; }
+.find { font-size: 18px; line-height: 1.6; margin: 8px 0; }
+.photo { width: 100%; border-radius: 10px; margin-bottom: 10px; display: block; }
+.ok { background: #e6f4ea; border: 2px solid #2e7d32; border-radius: 14px; padding: 22px 16px; text-align: center; margin-bottom: 14px; }
+.ok .big { font-size: 26px; font-weight: 700; color: #1b5e20; }
+.ok .gift { font-size: 22px; font-weight: 700; margin: 6px 0; }
+.ok .clock { font-size: 34px; font-weight: 700; color: #1b5e20; font-variant-numeric: tabular-nums; margin: 8px 0; }
+.alertbar { background: #c62828; color: #fff; border-radius: 10px; padding: 10px 14px; margin-bottom: 12px; font-weight: 700; }
+.alertpop { position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.55); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.alertpop .box { background: #fff; border: 3px solid #c62828; border-radius: 16px; padding: 22px 18px; max-width: 420px; width: 100%; }
+.alertpop .ttl { color: #b71c1c; font-size: 22px; font-weight: 700; margin: 0 0 12px; text-align: center; }
+.alertpop p { font-size: 17px; line-height: 1.6; margin: 0 0 10px; }
+.bad { background: #fdecea; border: 2px solid #c62828; border-radius: 14px; padding: 22px 16px; text-align: center; margin-bottom: 14px; }
+.bad .big { font-size: 22px; font-weight: 700; color: #b71c1c; }
+.giftbig { font-size: 24px; font-weight: 700; color: #1f4e3d; margin: 6px 0 10px; }
+.menu { background: #f7f5ef; border-radius: 8px; padding: 8px 12px; margin: 8px 0; font-size: 16px; white-space: pre-line; }
+.center { text-align: center; }
+.bigword { font-size: 30px; font-weight: 700; color: #1f4e3d; text-align: center; margin: 14px 0 4px; }
+.treasure { width: 100%; border-radius: 12px; display: block; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+.logo { text-align: center; margin: 18px 0 0; }
+.logo img { max-width: 160px; max-height: 60px; }
+details summary { font-weight: 600; cursor: pointer; }
+ol { padding-left: 22px; margin: 8px 0; }
+.scan { position: fixed; inset: 0; z-index: 50; background: rgba(15,20,25,.96); padding: 18px 16px; overflow-y: auto; }
+.scantitle { color: #fff; font-size: 20px; font-weight: 700; text-align: center; margin: 4px 0 12px; }
+.scanframe { position: relative; width: 100%; max-width: 420px; margin: 0 auto; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden; background: #000; }
+.scanframe video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scanaim { position: absolute; left: 15%; top: 20%; width: 70%; height: 52%; border: 3px solid #fee500; border-radius: 12px; box-shadow: 0 0 0 2000px rgba(0,0,0,.25); }
+.scanmsg { color: #fff; text-align: center; margin: 12px 0 0; font-size: 16px; }
+.bye { text-align: center; padding: 44px 18px; margin-top: 30px; }
+.byeline { font-size: 22px; font-weight: 700; color: #1f4e3d; margin: 0 0 14px; }
+.byesign { font-size: 17px; color: #52606d; margin: 26px 0 0; }
+</style>
+</head>
+<body>
+<div id="app" data-c="" data-s=""><p class="center" style="margin-top:60px">불러오는 중입니다.</p></div>
+<script>(function(){var q=new URLSearchParams(location.search),a=document.getElementById('app');a.setAttribute('data-c',(q.get('k')||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,40));a.setAttribute('data-s',(q.get('m')||'').replace(/[^A-Za-z0-9_-]/g,'').slice(0,40));})();</script>
+<script>
+var app = document.getElementById('app');
+var CODE = app.getAttribute('data-c') || '';
+var STORE = app.getAttribute('data-s') || '';
+var KEY = 'bomul_pid', KEY_O = 'walk_origin', KEY_P = 'walk_pre';
+var TODAY = '', LOGO = '', FAIL = '', timer = null;
+
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ''; if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); } catch (e) { return ''; } }
+function getPid() { return store(KEY); }
+function setPid(p) { store(KEY, p || ''); }
+function getOrigin() {
+  try { var o = JSON.parse(store(KEY_O) || 'null'); if (o && o.date === TODAY) return o; } catch (e) {}
+  if (TODAY) store(KEY_O, '');
+  return null;
+}
+function setOrigin(o) { o.date = TODAY; store(KEY_O, JSON.stringify(o)); }
+function getPre() { try { var p = JSON.parse(store(KEY_P) || 'null'); if (p && p.date === TODAY) return p; } catch (e) {} return {}; }
+function setPre(p) { p.date = TODAY; store(KEY_P, JSON.stringify(p)); }
+
+function el(tag, cls, text) {
+  var n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined && text !== null) n.textContent = text;
+  for (var i = 3; i < arguments.length; i++) if (arguments[i]) n.appendChild(arguments[i]);
+  return n;
+}
+function btn(text, fn, cls) { var b = el('button', cls || '', text); b.onclick = fn; return b; }
+function link(text, href, cls) { var a = el('a', 'btn ' + (cls || ''), text); a.href = href; a.target = '_blank'; a.rel = 'noopener'; return a; }
+function card() { var c = el('div', 'card'); for (var i = 0; i < arguments.length; i++) if (arguments[i]) c.appendChild(arguments[i]); return c; }
+function enable() { var bs = document.querySelectorAll('button'); for (var i = 0; i < bs.length; i++) bs[i].disabled = false; }
+
+function call(name, args, after) {
+  var bs = document.querySelectorAll('button');
+  for (var i = 0; i < bs.length; i++) bs[i].disabled = true;
+  var run = google.script.run.withSuccessHandler(function (v) { if (after) after(v); else show(v); })
+    .withFailureHandler(function () {
+      app.innerHTML = '';
+      app.appendChild(card(el('h1', '', '연결이 끊겼습니다'), el('p', '', '신호가 약할 수 있습니다. 잠시 뒤에 다시 시도해 주십시오.'),
+        btn('다시 시도', function () { location.reload(); })));
+    });
+  run[name].apply(run, args);
+}
+
+/* 아이콘으로 다시 들어왔을 때 걷던 화면 이어 보기 (그날, 같은 참가자만) */
+var KEY_L = 'walk_last', KEY_E = 'walk_end', KEEP = ['code', 'place', 'stores', 'started'];
+function resumeLast(v) {
+  if (!v) return v;
+  var day = new Date().toDateString();
+  if (v.reset || v.lost || v.view === 'finish' || (v.view === 'home' && (!v.started || v.finished))) { store(KEY_L, ''); return v; }
+  if (v.view === 'home') {
+    if (LAST) return v; /* 화면을 처음 열 때(아이콘)만 이어 보기 */
+    try {
+      var s = JSON.parse(store(KEY_L) || 'null');
+      if (s && s.date === day && s.pid === v.pid && s.v) { var r = s.v; r.note = '걷던 화면을 이어서 보여 드립니다.'; r.again = false; return r; }
+    } catch (e) {}
+    return v;
+  }
+  if (KEEP.indexOf(v.view) >= 0) {
+    store(KEY_E, '');
+    try { var c = {}; for (var k in v) if (k !== 'note') c[k] = v[k]; store(KEY_L, JSON.stringify({ date: day, pid: v.pid, v: c })); } catch (e) {}
+  }
+  return v;
+}
+
+/* 휴대폰 '뒤로' 단추: 앞 화면으로 돌아가고, 첫 화면에서는 밖으로 나가지 않음 */
+var HIST = [], HIST_I = -1, BACKING = false, TRAP = false, BYE = false, SELFBACK = false;
+/* 종료 화면에서 뒤로를 누르면: 이 탭의 앞 페이지(예전에 열었던 걸어서 춘천)가 다시 열리므로, 15초 안에 열린 페이지는 종료 화면을 보이고 계속 뒤로 물러나 탭의 처음까지 감 → 다음 뒤로에서 휴대폰 화면 */
+
+var HIST_ON = !!(window.google && google.script && google.script.history);
+/* 브라우저 기록에는 덫 하나만 둠: 뒤로를 누르면 앞 화면을 그리고 덫을 다시 놓음. 종료 화면에서는 덫을 놓지 않아 뒤로 한 번에 브라우저를 나감 */
+function setTrap(force) {
+  if (!HIST_ON || TRAP || (BYE && !force)) return;
+  try { google.script.history.push({ t: 1 }); TRAP = true; } catch (e) {}
+}
+function histPush(entry) {
+  if (BACKING) return;
+  HIST = HIST.slice(0, HIST_I + 1); HIST.push(entry); HIST_I = HIST.length - 1;
+  if (HIST.length > 60) { HIST.shift(); HIST_I--; }
+  setTrap();
+}
+function byeExit() {
+  BYE = true;
+  if (!HIST_ON || !TRAP) return;
+  setTrap(true);
+}
+function byeChain() {
+  var t = +(store('walk_exit') || 0);
+  if (!t || Date.now() - t > 15000) return false;
+  BYE = true;
+  app.innerHTML = '';
+  try { VIEWS.bye({}); } catch (e) {}
+  setTimeout(function () { store('walk_exit', String(Date.now())); try { window.history.back(); } catch (e) {} }, 50);
+  return true;
+}
+if (HIST_ON) {
+  try {
+    google.script.history.setChangeHandler(function (e) {
+      var st = e && e.state;
+      if (st && st.t) { TRAP = true; return; }
+      TRAP = false;
+      if (BYE) { setTrap(true); return; }
+      if (typeof SC !== 'undefined' && SC && SC.ov) { try { closeScanner(); } catch (er) {} setTrap(); return; }
+      if (HIST_I > 0) HIST_I--;
+      HIST = HIST.slice(0, HIST_I + 1);
+      var h = HIST[HIST_I];
+      if (h) {
+        BACKING = true;
+        try { if (h.fn) { LAST = h.v; redraw(h.v, h.fn); } else show(h.v); } finally { BACKING = false; }
+      }
+      setTrap();
+    });
+  } catch (e) {}
+}
+
+/* 개발 띠 (설정 시트 '환경') */
+function envMark(t) {
+  var d = document.getElementById('envmark');
+  if (!t) { if (d) d.remove(); return; }
+  if (!d) { d = document.createElement('div'); d.id = 'envmark'; d.style.cssText = 'position:fixed;top:0;left:0;z-index:9999;background:#7c3aed;color:#fff;font-size:12px;font-weight:bold;padding:2px 10px;border-bottom-right-radius:8px;opacity:.9;pointer-events:none'; document.body.appendChild(d); }
+  d.textContent = t;
+}
+
+/* 긴급 공지 (설정 시트 '긴급공지') */
+var ALERT = '', ALERT_LINK = '', ALERT_SEEN = '';
+function alertBar() {
+  var b = el('div', 'alertbar', '긴급 공지: ' + ALERT.split('\n')[0]);
+  b.onclick = function () { ALERT_SEEN = ''; alertPopup(); };
+  return b;
+}
+function alertPopup() {
+  if (!ALERT || ALERT_SEEN === ALERT || document.querySelector('.alertpop')) return;
+  var box = el('div', 'box', null, el('div', 'ttl', '긴급 공지'));
+  ALERT.split('\n').forEach(function (t) { if (t.trim()) box.appendChild(el('p', '', t)); });
+  if (ALERT_LINK) box.appendChild(link('자세히 보기', ALERT_LINK, 'sub'));
+  var ov = el('div', 'alertpop', null, box);
+  box.appendChild(btn('확인했습니다', function () { ALERT_SEEN = ALERT; ov.remove(); }));
+  document.body.appendChild(ov);
+}
+
+var LAST = null;
+function show(v) {
+  if (timer) { clearInterval(timer); timer = null; }
+  v = resumeLast(v);
+  LAST = v;
+  if (v.env !== undefined) envMark(v.env);
+  if (v.today) TODAY = v.today;
+  if (v.logo !== undefined) LOGO = v.logo;
+  if (v.failText !== undefined) FAIL = v.failText;
+  if (v.pid) setPid(v.pid);
+  if (v.lost) setPid('');
+  if (v.reset) { store(KEY_O, ''); store(KEY_P, ''); }
+  if (v.alert !== undefined) { ALERT = v.alert; ALERT_LINK = v.alertLink || ''; }
+  histPush({ v: v });
+  app.innerHTML = '';
+  if (ALERT) app.appendChild(alertBar());
+    if (v.note) app.appendChild(el('div', 'note', v.note));
+  var f = VIEWS[v.view];
+  if (f) f(v);
+  footer(v);
+  window.scrollTo(0, 0);
+  setTimeout(fitVideo, 0);
+  alertPopup();
+}
+/* 같은 정보로 다른 단계 화면을 그릴 때 */
+function redraw(v, fn) {
+  if (timer) { clearInterval(timer); timer = null; }
+  histPush({ v: v, fn: fn });
+  app.innerHTML = '';
+  if (ALERT) app.appendChild(alertBar());
+    fn(v);
+  footer(v);
+  window.scrollTo(0, 0);
+  setTimeout(fitVideo, 0);
+}
+/* 화면에 빈자리가 남으면 쇼츠를 그만큼 키움 */
+function fitVideo() {
+  var b = app.querySelector('.vbox');
+  if (!b) return;
+  b.style.maxWidth = '';
+  var rest = app.offsetTop + app.offsetHeight - b.offsetHeight;
+  var avail = window.innerHeight - rest - 4;
+  if (avail > b.offsetHeight) b.style.maxWidth = Math.floor(avail * 0.5625) + 'px';
+}
+window.addEventListener('resize', function () { setTimeout(fitVideo, 0); });
+function footer(v) {
+  if (LOGO) { var im = el('img'); im.src = LOGO; im.alt = '걸어서 춘천'; app.appendChild(el('div', 'logo', null, im)); }
+}
+
+/* ---- 도움 기능 ---- */
+function ytId(u) { var m = String(u || '').match(/(?:shorts\/|v=|youtu\.be\/|embed\/)([\w-]{11})/); return m ? m[1] : ''; }
+function video(u) {
+  var id = ytId(u);
+  if (!id) return null;
+  var f = document.createElement('iframe');
+  f.src = 'https://www.youtube.com/embed/' + id + '?playsinline=1&rel=0';
+  f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+  f.setAttribute('allowfullscreen', '');
+  return el('div', 'vbox', null, f);
+}
+function photos(s) {
+  var list = String(s || '').split(/[\s,]+/).filter(function (x) { return /^https?:\/\//.test(x); });
+  if (!list.length) return null;
+  var d = el('div', 'strip' + (list.length === 1 ? ' one' : ''));
+  list.forEach(function (u) { var im = el('img'); im.src = u; im.alt = ''; im.loading = 'lazy'; d.appendChild(im); });
+  return d;
+}
+function kakaoWalk(name, lat, lng) { return 'https://map.kakao.com/link/by/walk/' + encodeURIComponent(String(name).replace(/,/g, ' ')) + ',' + lat + ',' + lng; }
+function naverFind(q) { return 'https://map.naver.com/p/search/' + encodeURIComponent(q); }
+function km(a, b, c, d) {
+  var r = Math.PI / 180, x = Math.sin((c - a) * r / 2), y = Math.sin((d - b) * r / 2);
+  var h = x * x + Math.cos(a * r) * Math.cos(c * r) * y * y;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+function walkTime(k) { var m = Math.round(k * 1000 * 1.3 / 65); return m < 60 ? '걸어서 약 ' + m + '분' : '걸어서 약 ' + Math.floor(m / 60) + '시간 ' + (m % 60) + '분'; }
+function locate(ok, fail) {
+  if (!navigator.geolocation) { fail(); return; }
+  navigator.geolocation.getCurrentPosition(function (p) { ok(p.coords.latitude, p.coords.longitude); }, fail,
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+function safety() { return el('div', 'safe', '걸으면서 화면을 보지 마십시오. 자전거도로, 겨울 빙판, 어두운 시간을 조심해 주십시오.'); }
+function status(v) {
+  var s = el('div', 'status');
+  s.appendChild(el('span', '', '걸은 시간 ' + (v.mins || 0) + '분'));
+  s.appendChild(el('span', '', 'QR코드 ' + (v.count || 0) + '개'));
+  s.appendChild(el('span', '', '선물: ' + (v.giftName || '없음')));
+  return s;
+}
+function dateText(d) { var p = String(d || '').split('-'); return p.length === 3 ? p[0] + '년 ' + (+p[1]) + '월 ' + (+p[2]) + '일' : ''; }
+function iconGuide(open) {
+  var d = el('details');
+  if (open) d.open = true;
+  d.appendChild(el('summary', '', '휴대폰 홈 화면에 "걸어서 춘천" 아이콘 만들기'));
+  d.appendChild(el('p', 'small', '아이콘을 만들어 두시면, 춘천에 도착해서 아이콘만 누르면 바로 시작할 수 있습니다.'));
+  d.appendChild(el('h2', '', '갤럭시 등 안드로이드 (크롬)'));
+  var a = el('ol'); ['오른쪽 위 점 세 개(⋮)를 누릅니다.', '"홈 화면에 추가"를 누릅니다.', '이름을 "걸어서 춘천"으로 두고 "추가"를 누릅니다.'].forEach(function (t) { a.appendChild(el('li', '', t)); });
+  d.appendChild(a);
+  d.appendChild(el('h2', '', '아이폰 (사파리)'));
+  var b = el('ol'); ['아래쪽 공유 단추(네모에서 화살표가 올라간 모양)를 누릅니다.', '"홈 화면에 추가"를 누릅니다.', '이름을 "걸어서 춘천"으로 두고 "추가"를 누릅니다.'].forEach(function (t) { b.appendChild(el('li', '', t)); });
+  d.appendChild(b);
+  return card(d);
+}
+function howQuestion(codeKey, storeKey) {
+  app.innerHTML = '';
+  var c = card(el('h1', '', '어떻게 알고 오셨나요'), el('p', 'small', '하나만 골라 주십시오. 다른 것은 묻지 않습니다.'));
+  ['쇼츠를 보고', '지나가다 코드를 보고', '아는 사람 소개로', '그 밖에'].forEach(function (t) {
+    c.appendChild(btn(t, function () { call('register', [t, codeKey || '', storeKey || '']); }, 'sub'));
+  });
+  app.appendChild(c);
+}
+function bearing(a, b, c, d) {
+  var r = Math.PI / 180, y = Math.sin((d - b) * r) * Math.cos(c * r);
+  var x = Math.cos(a * r) * Math.sin(c * r) - Math.sin(a * r) * Math.cos(c * r) * Math.cos((d - b) * r);
+  var deg = (Math.atan2(y, x) / r + 360) % 360;
+  return ['북쪽', '북동쪽', '동쪽', '남동쪽', '남쪽', '남서쪽', '서쪽', '북서쪽'][Math.round(deg / 45) % 8];
+}
+function distText(k) { return k < 1 ? '약 ' + (Math.round(k * 1000 / 10) * 10) + 'm' : '약 ' + k.toFixed(1) + 'km'; }
+function nearestCodes(v, lat, lng, isStart) {
+  var pool = (v.codes || []).filter(function (c) { return c.lat && c.lng; });
+  if (isStart && pool.some(function (c) { return c.start; })) pool = pool.filter(function (c) { return c.start; });
+  var list = pool.map(function (c) {
+    return { no: c.no, find: c.find, photo: c.photo, lat: +c.lat, lng: +c.lng, d: km(lat, lng, +c.lat, +c.lng), dir: bearing(lat, lng, +c.lat, +c.lng) };
+  }).sort(function (a, b) { return a.d - b.d; }).slice(0, 3);
+  var c = card(el('h1', '', isStart ? '걷기시작 QR코드 찾기' : '가장 가까운 QR코드'));
+  if (!list.length) { c.appendChild(el('p', '', '아직 위치가 적힌 코드가 없습니다.')); return c; }
+  var x = list[0];
+  c.appendChild(el('h2', '', x.no));
+  c.appendChild(el('p', 'small', '여기서 ' + distText(x.d) + ' · ' + x.dir + ' · ' + walkTime(x.d)));
+  var ph = photos(x.photo);
+  c.appendChild(ph || el('div', 'nophoto', '코드가 붙은 자리 사진은 답사 뒤 넣습니다'));
+  c.appendChild(el('p', 'find', x.find || '찾는 법은 답사 뒤 적습니다.'));
+  c.appendChild(scanBtn());
+  if (list.length > 1) {
+    c.appendChild(el('p', 'small', '그다음 가까운 QR코드: ' + list.slice(1).map(function (y) { return y.no + ' (' + distText(y.d) + ', ' + y.dir + ')'; }).join(', ')));
+  }
+  return c;
+}
+function failCard(retry) {
+  var c = card(el('h1', '', '현재의 위치를 읽지 못했습니다'));
+  var text = FAIL || '가장 가까운 "걸어서 춘천" QR코드를 스캔하세요. 그 자리가 걷기 시작점입니다.\n춘천역, 남춘천역, 버스터미널에도 QR코드가 있습니다.\n자가용으로 오셨다면 차 세운 곳을 사진으로 찍어 두십시오.';
+  String(text).split(/\n/).forEach(function (t, i) { if (t.trim()) c.appendChild(el('p', i ? 'small' : '', t)); });
+  c.appendChild(scanBtn());
+  if (retry) c.appendChild(btn('위치 다시 읽기', retry, 'sub'));
+  return c;
+}
+function showNearest(v, isStart, parent) {
+  var o = getOrigin();
+  var box = el('div');
+  (parent || app).appendChild(box);
+  box.appendChild(el('p', 'center small', '지금 위치를 읽는 중입니다...'));
+  locate(function (lat, lng) { box.innerHTML = ''; box.appendChild(nearestCodes(v, lat, lng, isStart)); },
+    function () {
+      box.innerHTML = '';
+      if (o && o.lat) box.appendChild(nearestCodes(v, +o.lat, +o.lng, isStart));
+      else box.appendChild(failCard(null));
+    });
+}
+
+/* ---- QR코드 스캔 (화면 안에서) ---- */
+var SC = null, BD = null;
+function scanBtn(label) { return btn(label || 'QR코드 스캔하기', function () { openScanner(store('cam_no') === '1'); }); }
+function handleScan(text) {
+  var m = String(text || '').match(/[?&]([km])=([\w-]+)/);
+  if (!m) return false;
+  closeScanner();
+  if (m[1] === 'k') { CODE = m[2]; STORE = ''; call('enter', [getPid(), m[2], '']); }
+  else { STORE = m[2]; CODE = ''; call('enter', [getPid(), '', m[2]]); }
+  return true;
+}
+function loadJsQR(cb) {
+  if (window.jsQR) { cb(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+  s.onload = function () { cb(); };
+  s.onerror = function () { cb(); };
+  document.head.appendChild(s);
+}
+function detectQR(cv, cb) {
+  var useJs = function () {
+    loadJsQR(function () {
+      if (!window.jsQR) { cb(''); return; }
+      var d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height);
+      var r = window.jsQR(d.data, cv.width, cv.height, { inversionAttempts: 'attemptBoth' });
+      cb(r ? r.data : '');
+    });
+  };
+  if ('BarcodeDetector' in window) {
+    try {
+      if (!BD) BD = new window.BarcodeDetector({ formats: ['qr_code'] });
+      BD.detect(cv).then(function (r) { if (r && r.length) cb(r[0].rawValue); else useJs(); }).catch(useJs);
+      return;
+    } catch (e) {}
+  }
+  useJs();
+}
+function closeScanner() {
+  if (!SC) return;
+  if (SC.timer) clearInterval(SC.timer);
+  if (SC.stream) SC.stream.getTracks().forEach(function (t) { t.stop(); });
+  if (SC.ov.parentNode) SC.ov.parentNode.removeChild(SC.ov);
+  SC = null;
+}
+function openScanner(photoOnly) {
+  closeScanner();
+  var ov = el('div', 'scan');
+  var v = document.createElement('video');
+  v.setAttribute('playsinline', ''); v.setAttribute('autoplay', ''); v.muted = true;
+  var frame = el('div', 'scanframe', null, v, el('div', 'scanaim'));
+  var msg = el('p', 'scanmsg', '카메라를 여는 중입니다...');
+  var file = document.createElement('input');
+  file.type = 'file'; file.accept = 'image/*'; file.setAttribute('capture', 'environment'); file.style.display = 'none';
+  ov.appendChild(el('div', 'scantitle', 'QR코드 스캔하기'));
+  ov.appendChild(frame);
+  ov.appendChild(msg);
+  ov.appendChild(btn('사진으로 찍어서 읽기', function () { file.click(); }, 'sub'));
+  ov.appendChild(btn('닫기', closeScanner, 'sub'));
+  ov.appendChild(file);
+  document.body.appendChild(ov);
+  SC = { ov: ov, stream: null, timer: null };
+  var cv = document.createElement('canvas'), busy = false;
+  file.onchange = function () {
+    var f = file.files && file.files[0];
+    if (!f) return;
+    msg.textContent = '사진에서 QR코드를 읽는 중입니다...';
+    var img = new Image();
+    img.onload = function () {
+      var s = Math.min(1, 1280 / Math.max(img.width, img.height));
+      cv.width = Math.round(img.width * s); cv.height = Math.round(img.height * s);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      detectQR(cv, function (t) {
+        if (t && handleScan(t)) return;
+        msg.textContent = t ? '"걸어서 춘천" QR코드가 아닙니다. 다시 찍어 주십시오.' : 'QR코드를 찾지 못했습니다. 조금 더 가까이에서 다시 찍어 주십시오.';
+      });
+    };
+    img.src = URL.createObjectURL(f);
+    file.value = '';
+  };
+  var noCam = function () {
+    store('cam_no', '1');
+    frame.style.display = 'none';
+    msg.textContent = '이 화면에서는 카메라를 바로 열 수 없습니다. 아래 "사진으로 찍어서 읽기"를 눌러 QR코드를 찍어 주십시오.';
+  };
+  if (photoOnly) { frame.style.display = 'none'; msg.textContent = 'QR코드를 사진으로 찍으면 바로 읽습니다. 카메라가 열리지 않으면 아래 단추를 눌러 주십시오.'; file.click(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { noCam(); return; }
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }).then(function (stream) {
+    if (!SC) { stream.getTracks().forEach(function (t) { t.stop(); }); return; }
+    SC.stream = stream;
+    v.srcObject = stream;
+    v.play();
+    msg.textContent = 'QR코드를 네모 안에 맞춰 주십시오.';
+    SC.timer = setInterval(function () {
+      if (busy || !v.videoWidth) return;
+      busy = true;
+      var s = Math.min(1, 800 / Math.max(v.videoWidth, v.videoHeight));
+      cv.width = Math.round(v.videoWidth * s); cv.height = Math.round(v.videoHeight * s);
+      cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+      detectQR(cv, function (t) {
+        busy = false;
+        if (t && !handleScan(t)) msg.textContent = '"걸어서 춘천" QR코드가 아닙니다.';
+      });
+    }, 300);
+  }).catch(noCam);
+}
+
+/* 보물 글귀를 춘천 그림 위에 얹은 사진 만들기 */
+function drawScene(x, W, H) {
+  var g = x.createLinearGradient(0, 0, 0, H * 0.62);
+  g.addColorStop(0, '#7fa8d4'); g.addColorStop(0.55, '#c9d9ea'); g.addColorStop(1, '#f6dcb8');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.fillStyle = 'rgba(255,240,200,0.9)'; x.beginPath(); x.arc(W * 0.74, H * 0.28, 62, 0, Math.PI * 2); x.fill();
+  var hills = [['#9fb3c4', 0.42, 70, 0.004, 1.1], ['#7d98ac', 0.50, 55, 0.006, 2.3], ['#5b7d8e', 0.58, 40, 0.009, 0.6]];
+  hills.forEach(function (h) {
+    x.fillStyle = h[0]; x.beginPath(); x.moveTo(0, H);
+    for (var i = 0; i <= W; i += 8) x.lineTo(i, H * h[1] - Math.sin(i * h[3] + h[4]) * h[2] - Math.sin(i * h[3] * 2.7 + h[4]) * h[2] * 0.4);
+    x.lineTo(W, H); x.closePath(); x.fill();
+  });
+  var w = x.createLinearGradient(0, H * 0.62, 0, H);
+  w.addColorStop(0, '#8fb0c8'); w.addColorStop(1, '#3f6a85');
+  x.fillStyle = w; x.fillRect(0, H * 0.62, W, H * 0.38);
+  x.strokeStyle = 'rgba(255,255,255,0.35)'; x.lineWidth = 3;
+  for (var k = 0; k < 14; k++) { var yy = H * 0.66 + k * 26, xx = (k * 137) % (W - 240); x.beginPath(); x.moveTo(xx, yy); x.lineTo(xx + 120 + (k % 3) * 40, yy); x.stroke(); }
+}
+function wrapLines(x, text, maxW) {
+  var out = [];
+  String(text).split(/\n/).forEach(function (para) {
+    var line = '';
+    for (var i = 0; i < para.length; i++) {
+      var t = line + para[i];
+      if (x.measureText(t).width > maxW && line) {
+        var cut = line.lastIndexOf(' ');
+        if (cut > line.length * 0.5) { out.push(line.slice(0, cut)); line = line.slice(cut + 1) + para[i]; }
+        else { out.push(line); line = para[i]; }
+      } else line = t;
+    }
+    out.push(line.trim());
+  });
+  return out.filter(function (l) { return l !== ''; });
+}
+function quoteLines(x, text, maxW) {
+  var out = [];
+  String(text || '').split(/\s*(?:\/|\n)\s*/).forEach(function (p) { if (p) wrapLines(x, p, maxW).forEach(function (l) { out.push(l); }); });
+  return out;
+}
+function fitQuote(x, text, maxW, maxH, big, small, font) {
+  var marked = String(text || '').split(/\s*(?:\/|\n)\s*/).filter(function (p) { return p; }).length;
+  var size = big, lines = [], lh = 0;
+  while (true) {
+    x.font = '600 ' + size + 'px ' + font;
+    lines = quoteLines(x, text, maxW); lh = Math.round(size * 1.45);
+    if ((lines.length <= marked && lines.length * lh <= maxH) || size <= small) break;
+    size -= 2;
+  }
+  return { size: size, lines: lines, lh: lh };
+}
+/* own: 방문자가 고른 사진 주소(휴대폰 안). 있으면 사진이 보이게 글만 아래쪽에 얹음 */
+function makeTreasure(v, done, own) {
+  var W = 1080, H = 1440, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  var x = cv.getContext('2d');
+  var font = '"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif';
+  var foot = dateText(v.today) + ' · ' + (v.mins || 0) + '분 · QR코드 ' + (v.count || 0) + '개';
+  var boxStyle;
+  var out = function (useBg) {
+    var url = '';
+    try { url = cv.toDataURL('image/jpeg', 0.9); } catch (e) { if (useBg) { x.clearRect(0, 0, W, H); boxStyle(false); return; } }
+    done(url);
+  };
+  var cover = function (img) {
+    var r = Math.max(W / img.width, H / img.height), iw = img.width * r, ih = img.height * r;
+    x.drawImage(img, (W - iw) / 2, (H - ih) / 2, iw, ih);
+  };
+  var photoStyle = function (img) {
+    cover(img);
+    var g = x.createLinearGradient(0, H * 0.5, 0, H);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.78)');
+    x.fillStyle = g; x.fillRect(0, H * 0.5, W, H * 0.5);
+    var q = fitQuote(x, v.short || v.quote, W - 160, H * 0.32, 60, 30, font);
+    var top = H - 150 - q.lines.length * q.lh;
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.shadowColor = 'rgba(0,0,0,0.7)'; x.shadowBlur = 14;
+    x.fillStyle = '#ffe18c'; x.font = '600 32px ' + font;
+    x.fillText('오늘 찾은 나의 소중한 것', W / 2, top - 50);
+    x.fillStyle = '#ffffff'; x.font = '600 ' + q.size + 'px ' + font;
+    q.lines.forEach(function (l, i) { x.fillText(l, W / 2, top + i * q.lh + q.lh / 2); });
+    x.fillStyle = '#ebebeb'; x.font = '600 28px ' + font;
+    x.fillText(foot + ' · 걸어서 춘천', W / 2, H - 70);
+    x.shadowBlur = 0; x.textBaseline = 'alphabetic';
+    out(false);
+  };
+  boxStyle = function (useBg, img) {
+    if (useBg && img) cover(img); else drawScene(x, W, H);
+    var q = fitQuote(x, v.quote, W - 220, H * 0.5, 50, 34, font);
+    var lh = q.lh, boxH = q.lines.length * lh + 260, top = (H - boxH) / 2 - 40;
+    x.fillStyle = 'rgba(255,255,255,0.86)';
+    x.beginPath();
+    if (x.roundRect) x.roundRect(70, top, W - 140, boxH, 36); else x.rect(70, top, W - 140, boxH);
+    x.fill();
+    x.textAlign = 'center';
+    x.fillStyle = '#8a6d1f'; x.font = '600 36px ' + font;
+    x.fillText('오늘 찾은 나의 소중한 것', W / 2, top + 80);
+    x.fillStyle = '#1f4e3d'; x.font = '600 ' + q.size + 'px ' + font;
+    q.lines.forEach(function (l, i) { x.fillText(l, W / 2, top + 170 + i * lh); });
+    x.fillStyle = '#52606d'; x.font = '400 32px ' + font;
+    x.fillText(foot, W / 2, top + boxH - 50);
+    x.fillStyle = '#ffffff'; x.font = '700 44px ' + font;
+    x.shadowColor = 'rgba(0,0,0,0.35)'; x.shadowBlur = 8;
+    x.fillText('걸어서 춘천', W / 2, H - 80);
+    x.shadowBlur = 0;
+    out(useBg && img);
+  };
+  var load = function (src, ok, fail) {
+    var img = new Image();
+    if (!/^(blob|data):/.test(src)) img.crossOrigin = 'anonymous';
+    img.onload = function () { ok(img); };
+    img.onerror = fail;
+    img.src = src;
+  };
+  if (own) load(own, photoStyle, function () { boxStyle(false); });
+  else if (v.bg) load(v.bg, function (img) { boxStyle(true, img); }, function () { boxStyle(false); });
+  else boxStyle(false);
+}
+
+/* ---- 화면 ---- */
+var VIEWS = {
+  /* 2. 유튜브 링크로 들어온 신청 페이지 */
+  welcome: function (v) {
+    var vd = video(v.shorts);
+    var c = card(vd,
+      el('h1', '', '걸어서 만나는 춘천'),
+      el('p', '', '춘천을 천천히 걸으며, 자리마다 안내를 받고, 걸은 만큼 선물을 받습니다. 걷기를 마치면 당신에게 소중한 것을 일깨우는 글귀를 드립니다.'),
+      el('p', 'small', '이름과 전화번호는 받지 않습니다. 위치는 휴대폰에만 두고 그날 지웁니다.'));
+    if (vd) vd.style.marginBottom = '12px';
+    c.appendChild(btn('참가 신청하기', function () { call('register', ['쇼츠', '', '']); }));
+    app.appendChild(c);
+  },
+
+  /* 3. 신청한 뒤: 감사 쇼츠, 아이콘 만들기, 춘천에서 만나요 */
+  joined: function (v) {
+    var vd = video(v.shorts);
+    if (vd) app.appendChild(card(vd));
+    app.appendChild(el('div', 'note', '참가 신청이 되었습니다. 고맙습니다.'));
+    app.appendChild(iconGuide(true));
+    app.appendChild(card(el('p', '', '춘천에서 걷기를 시작할 때 홈 화면의 "걸어서 춘천" 아이콘을 눌러 주십시오.'),
+      el('div', 'bigword', '춘천에서 만나요')));
+  },
+
+  promo: function (v) {
+    app.appendChild(card(el('h1', '', '걸어서 만나는 춘천'),
+      el('p', '', '이 QR코드는 "걸어서 춘천"의 QR코드입니다. 참가하시면 이 자리에서부터 걷는 길을 안내해 드립니다.')));
+    if (v.story) app.appendChild(card(el('h2', '', '이 자리의 이야기 (' + v.place + ')'), el('p', '', v.story)));
+    app.appendChild(btn('참가하고 여기서 걷기', function () { howQuestion(CODE, ''); }));
+  },
+
+  storepromo: function (v) {
+    app.appendChild(card(el('h1', '', v.storeName),
+      el('p', '', '"걸어서 춘천"의 선물처입니다. 걸어서 춘천에 참가해 걸으시면, 걸은 만큼 이곳에서 할인을 받으실 수 있습니다.'),
+      btn('참가 신청하기', function () { howQuestion('', STORE); })));
+  },
+
+  /* 5. 걷기 전 확인: 누구와, 얼마나 */
+  who: function (v) {
+    var pre = getPre(), pick = { who: pre.who || '', plan: pre.plan || '', from: pre.from || '' };
+    var ready = function () { return !!(pick.who && pick.plan && pick.from); };
+    if (v.again) app.appendChild(el('div', 'note', '새로 걷기를 시작합니다. 선물이 새로 쌓입니다. 지금 계신 자리가 새 출발지가 됩니다.'));
+    var go = btn('확인하기', function () {
+      setPre(pick);
+      if (v.codeKey) { call('startWalk', [v.pid, pick.who, v.codeKey, pick.plan, pick.from]); return; }
+      app.innerHTML = '';
+      app.appendChild(el('p', 'center', '지금 계신 자리를 걷기 시작점으로 저장합니다. 위치 허용을 물으면 "허용"을 눌러 주십시오.'));
+      locate(function (lat, lng) {
+        var t = new Date(), hh = t.getHours();
+        setOrigin({ lat: lat, lng: lng, name: '출발지', kind: '위치', time: (hh < 12 ? '오전 ' : '오후 ') + ((hh + 11) % 12 + 1) + '시 ' + t.getMinutes() + '분' });
+        call('startWalk', [v.pid, pick.who, '', pick.plan, pick.from]);
+      }, function () {
+        redraw(v, function () { app.appendChild(failCard(function () { show(v); })); app.appendChild(safety()); });
+      });
+    });
+    var group = function (title, sub, list, field) {
+      var c = card(el('h1', '', title));
+      if (sub) c.appendChild(el('p', 'small', sub));
+      var bs = [];
+      list.forEach(function (w) {
+        var b = btn(w[1], function () {
+          pick[field] = w[0];
+          bs.forEach(function (x) { x.className = 'pick' + (x === b ? ' on' : ''); });
+          go.disabled = !ready();
+        }, 'pick' + (pick[field] === w[0] ? ' on' : ''));
+        bs.push(b); c.appendChild(b);
+      });
+      return c;
+    };
+    app.appendChild(group('어디에서 오셨나요?', '더 나은 안내를 만드는 데만 씁니다.', [['춘천', '춘천'], ['강원', '강원도 (춘천 밖)'], ['수도권', '서울·경기·인천'], ['그 밖', '그 밖의 지역']], 'from'));
+    app.appendChild(group('오늘 누구와 걸으십니까', '안내와 마지막 글귀를 맞춰 드리는 데만 씁니다.', [['혼자', '혼자 걷습니다'], ['가족', '가족과 걷습니다'], ['친구', '친구나 연인과 걷습니다']], 'who'));
+    app.appendChild(group('얼마나 걸으실 예정입니까', '코스와 선물처 안내에 씁니다.', [['1시간 미만', '1시간 미만'], ['3시간 전후', '3시간 전후'], ['5시간 이상', '5시간 이상']], 'plan'));
+    app.appendChild(go);
+    go.disabled = !ready();
+  },
+
+  /* 4. 아이콘으로 들어온 첫 화면 */
+  home: function (v) {
+    if (!v.started) {
+      app.appendChild(card(video(v.intro),
+        btn('걷기전 확인하기', function () { show({ view: 'who', pid: v.pid, channel: v.channel, today: v.today, test: v.test }); })));
+      return;
+    }
+    app.appendChild(status(v));
+    var c = card(el('h1', '', v.finished ? '오늘 걷기를 마치셨습니다' : '걷는 중입니다'));
+    if (!v.finished) c.appendChild(scanBtn());
+    if (!v.finished) c.appendChild(btn('가까운 QR코드 보기', function () { showNearest(v); }, 'sub'));
+    c.appendChild(btn(v.finished ? '소중한 것과 돌아가는 길 다시 보기' : '여기서 마치고 돌아가기', function () { call('finish', [v.pid]); }, 'sub'));
+    if (v.finished) c.appendChild(btn('다시 새로 걷기', function () { walkAgain(v); }, 'sub'));
+    app.appendChild(c);
+    app.appendChild(safety());
+  },
+
+  /* 6~7. 시작점 저장 뒤 걷기 시작 화면 */
+  started: function (v) {
+    var o = getOrigin();
+    if (v.again) app.appendChild(el('div', 'note', '다시 새로 걷기를 시작합니다. 선물이 새로 쌓입니다.'));
+    var box = card(video(v.howto), el('div', 'guide', '가장 가까운 QR코드를 찾아 스캔하세요'));
+    box.appendChild(btn('길안내 시작', function () {
+      redraw(v, function () {
+        if (o && o.lat) app.appendChild(nearestCodes(v, +o.lat, +o.lng, true)); else showNearest(v, true);
+        app.appendChild(safety());
+      });
+    }));
+    app.appendChild(box);
+  },
+
+  /* 8~10. QR코드를 찍었을 때: (선물 안내) → 가이드 */
+  code: function (v) {
+    if (v.originCode) setOrigin({ lat: v.originCode.lat, lng: v.originCode.lng, name: '출발 ' + v.originCode.no, kind: '코드' });
+    if (v.giftOffer && !v.skipGift) {
+      app.appendChild(status(v));
+      app.appendChild(card(el('h1', '', '선물이 생겼습니다'), video(v.giftShorts),
+        el('p', 'center', '잘 걸으셨습니다. 지금 받을 선물: ' + v.giftName),
+        btn('선물보기', function () { call('showStores', [v.pid, v.codeKey]); }),
+        btn('계속 걷기', function () { v.skipGift = true; redraw(v, VIEWS.code); }, 'sub')));
+      return;
+    }
+    app.appendChild(status(v));
+    if (v.end) app.appendChild(card(el('h1', 'center', '코스의 끝입니다'), el('p', 'center', '여기가 이 코스의 마지막 QR코드입니다. 왔던 길로 되돌아 걸으시거나, 여기서 마치실 수 있습니다.')));
+    if (v.closed) app.appendChild(el('div', 'bad', null, el('div', 'big', '이 자리의 길은 지금 통제 중입니다'), el('p', '', '안전을 위해 여기서 마치시고 돌아가는 길을 안내받아 주십시오.')));
+    var hv = video(v.guideShorts);
+    if (hv) { app.appendChild(card(hv, el('p', 'small center', '소리가 나지 않으면 영상의 재생 단추를 눌러 주십시오.'))); }
+    (v.choices || []).forEach(function (c) {
+      var box = card(el('h1', '', c.text));
+      if (c.desc) box.appendChild(el('p', '', c.desc));
+      var ph = photos(c.photo);
+      if (ph) box.appendChild(ph);
+      box.appendChild(btn(c.kind === '마치기' ? '여기서 마치기' : (c.kind === '선물처' ? '선물처 보기' : (c.came ? '왔던 길로 되돌아가기' : '이 길로 가기')), function () { call('choose', [v.pid, v.codeKey, c.n]); }, c.kind === '길' ? '' : 'sub'));
+      app.appendChild(box);
+    });
+    if (v.storeButton) app.appendChild(btn('가까운 선물처 보기', function () { call('showStores', [v.pid, v.codeKey]); }, 'sub'));
+    if (v.story) app.appendChild(card(el('h2', '', '이 자리의 이야기 (' + v.place + ')'), el('p', '', v.story)));
+  },
+
+  place: function (v) {
+    var c = v.choice;
+    if (v.returnTo) {
+      var r = v.returnTo;
+      app.appendChild(el('div', 'note', '선물처에 오시기 전 떠났던 QR코드로 돌아가 스캔해 주십시오. 그 자리에서 이어 걷습니다.'));
+      var rb = card(el('h2', '', '돌아갈 QR코드'), el('h1', '', String(r.name || r.no).replace(/^\(예시\)\s*/, '')));
+      var rp = photos(r.photo);
+      if (rp) rb.appendChild(rp);
+      if (r.find) rb.appendChild(el('p', '', r.find));
+      if (r.lat && r.lng) {
+        rb.appendChild(link('길 안내 (카카오맵)', kakaoWalk(r.name || r.no, r.lat, r.lng), 'map'));
+        rb.appendChild(el('p', 'small', '다 보신 뒤 휴대폰의 \'뒤로\' 단추를 누르면 이 화면으로 돌아옵니다.'));
+      }
+      app.appendChild(rb);
+      app.appendChild(scanBtn());
+      app.appendChild(safety());
+      return;
+    }
+    if (v.back) app.appendChild(el('div', 'note', '걷던 길로 되돌아갑니다.'));
+    var box = card(el('h2', '', v.back ? '걷던 길' : '고르신 길'), el('h1', '', c.text));
+    var vd = video(c.shorts);
+    if (vd) box.appendChild(vd);
+    var ph = photos(c.photo);
+    if (ph) box.appendChild(ph);
+    if (c.desc) box.appendChild(el('p', '', c.desc));
+    app.appendChild(box);
+    app.appendChild(el('div', 'note', '이제 걸어가십시오. 다음 QR코드를 만나면 아래 단추를 눌러 스캔해 주십시오.'));
+    app.appendChild(scanBtn());
+    app.appendChild(safety());
+  },
+
+  /* 11. 선물보기: 가까운 선물처 */
+  stores: function (v) {
+    app.appendChild(card(el('h1', '', '가까운 선물처'), el('p', '', '지금 받을 선물: ' + v.giftName)));
+    if (!v.stores.length) app.appendChild(card(el('p', '', '지금 문을 연 가까운 선물처가 없습니다. 조금 더 걸어 보십시오.')));
+    v.stores.forEach(function (s) {
+      var c = card(el('h1', '', s.name), el('p', 'small', s.mins ? '걸어서 약 ' + s.mins + '분' : '가까운 곳'));
+      if (s.gift) c.appendChild(el('div', 'giftbig', s.gift));
+      if (s.menu) c.appendChild(el('div', 'menu', s.menu));
+      var ph = photos(s.photos);
+      if (ph) c.appendChild(ph);
+      if (s.guide) c.appendChild(el('p', '', s.guide));
+      c.appendChild(el('p', 'small', '가시기 전 "선물처 자세히 보기"에서 영업 여부를 확인해 주십시오.'));
+      c.appendChild(link('선물처 자세히 보기 (네이버)', naverFind(s.naver), 'naver'));
+      if (s.lat && s.lng) c.appendChild(link('길 안내 (카카오맵)', kakaoWalk(s.name, s.lat, s.lng), 'map'));
+      c.appendChild(el('p', 'small', '다 보신 뒤 휴대폰의 \'뒤로\' 단추를 누르면 이 화면으로 돌아옵니다. 홈 화면 아이콘을 다시 누르지 않아도 됩니다.'));
+      app.appendChild(c);
+    });
+    app.appendChild(el('div', 'note', '사용 방법: 선물처에 붙은 "걸어서 춘천" QR코드를 아래 단추로 스캔하시면 됩니다.'));
+    app.appendChild(scanBtn());
+    app.appendChild(btn('계속 걷기(선물은 나중에)', function () { call('enter', [v.pid, v.codeKey, '']); }, 'sub'));
+    if (v.hint) app.appendChild(card(el('h1', '', '계속 걷기(선물은 나중에)'), el('p', '', v.hint)));
+  },
+
+  /* 12. 선물처 앞에서 QR코드를 찍었을 때 */
+  counter: function (v) {
+    if (v.state === 'invalid') { app.appendChild(card(el('h1', '', '쓰이지 않는 선물코드입니다'))); return; }
+    var top = function () {
+      var c = card(video(v.shorts), el('h1', '', v.storeName));
+      if (c.firstChild && c.firstChild.className === 'vbox') c.firstChild.style.marginBottom = '12px';
+      var ph = photos(v.photos);
+      if (ph) c.appendChild(ph);
+      if (v.menu) c.appendChild(el('div', 'menu', v.menu));
+      return c;
+    };
+    if (v.state === 'notstarted') {
+      app.appendChild(top());
+      app.appendChild(card(el('p', '', '오늘 걷기를 시작하신 뒤에 선물을 받을 수 있습니다.'),
+        btn('걷기 화면으로', function () { STORE = ''; call('enter', [v.pid, '', '']); }, 'sub')));
+      return;
+    }
+    if (v.state === 'soldout') {
+      app.appendChild(top());
+      app.appendChild(card(el('p', '', '오늘 선물은 마감되었습니다. 걸으시면서 다른 선물처를 이용해 주십시오.')));
+      return;
+    }
+    if (v.state === 'used') {
+      app.appendChild(el('div', 'bad', null, el('div', 'big', '오늘 쌓인 선물을 이미 받으셨습니다'), el('p', '', '더 걸으시면 다시 쌓입니다.')));
+      app.appendChild(btn('다시 걷기', function () { STORE = ''; call('resumeWalk', [v.pid]); }));
+      return;
+    }
+    if (v.state === 'ready') {
+      app.appendChild(top());
+      app.appendChild(card(el('h2', '', '지금 받을 선물 (' + v.giftName + ')'), el('div', 'giftbig', v.gift),
+        el('div', 'note', '이 화면을 선물처 주인께 보여 드리십시오. 주인께서 아래 단추를 눌러 주십니다. 누르면 오늘 쌓인 선물이 처음으로 돌아갑니다.'),
+        btn('선물받기 (확인)', function () { call('useGift', [v.pid, STORE]); })));
+      return;
+    }
+    if (v.state === 'done') {
+      var clock = el('div', 'clock', '');
+      var tick = function () { var d = new Date(), z = function (n) { return (n < 10 ? '0' : '') + n; }; clock.textContent = z(d.getHours()) + ':' + z(d.getMinutes()) + ':' + z(d.getSeconds()); };
+      tick(); timer = setInterval(tick, 500);
+      app.appendChild(el('div', 'ok', null, el('div', 'big', '확인 완료'), el('p', '', v.storeName), clock, el('div', 'gift', v.gift), el('p', 'small', '확인 시각 ' + v.usedAt)));
+      noteCard(v.pid);
+      var n = card(el('h1', '', '다음은'));
+      n.appendChild(btn('다시 걷기', function () { STORE = ''; call('resumeWalk', [v.pid]); }));
+      n.appendChild(btn('여기서 마치고 돌아가기', function () { STORE = ''; call('finish', [v.pid]); }, 'sub'));
+      app.appendChild(n);
+    }
+  },
+
+  /* 14. 걷기를 마친 뒤: 축하 쇼츠 → 보물 */
+  finish: function (v) {
+    if (v.goback) { app.appendChild(el('div', 'note', '돌아가는 길을 이어서 보여 드립니다.')); VIEWS.goback(v); return; }
+    app.appendChild(card(el('h1', 'center', '잘 걸으셨습니다'),
+      el('p', 'small center', (v.mins || 0) + '분 · QR코드 ' + (v.count || 0) + '개'),
+      video(v.celebrate),
+      btn('내게 가장 소중한 것은 무엇일까?', function () { redraw(v, VIEWS.treasure); })));
+  },
+
+  treasure: function (v) {
+    var c = card(el('h2', 'center', '오늘 찾은 나의 소중한 것'));
+    app.appendChild(c);
+    var area = el('div');
+    c.appendChild(area);
+    var pick = el('input'); pick.type = 'file'; pick.accept = 'image/*'; pick.style.display = 'none';
+    c.appendChild(pick);
+    var draw = function (own) {
+      area.innerHTML = '';
+      var wait = el('p', 'center small', '소중한 것을 꺼내는 중입니다...');
+      area.appendChild(wait);
+      makeTreasure(v, function (url) {
+        wait.remove();
+        if (!url) { area.appendChild(el('p', 'bigword', String(v.quote || '').replace(/\s*\/\s*/g, ' '))); }
+        else {
+          var im = el('img', 'treasure'); im.src = url; im.alt = '오늘 찾은 나의 소중한 것'; area.appendChild(im);
+          area.appendChild(btn('내 사진으로 만들어 저장하기', function () { pick.value = ''; pick.click(); }));
+          area.appendChild(el('p', 'small center', '친구·가족과 찍은 사진을 고르시면 그 사진 위에 글을 얹어 저장합니다. 사진은 이 휴대폰에서만 쓰고 어디에도 보내지 않습니다.'));
+          var a = link('사진으로 저장하기', url, 'sub'); a.download = '걸어서춘천_소중한것_' + (v.today || '') + '.jpg'; a.removeAttribute('target');
+          area.appendChild(a);
+          area.appendChild(el('p', 'small center', '저장이 안 되면 그림을 길게 눌러 "이미지 저장"을 골라 주십시오.'));
+          area.appendChild(el('p', 'small center', '인스타그램에 #걸어서춘천 으로 올려 주시면 함께 보겠습니다.'));
+          if (own) setTimeout(function () { try { a.click(); } catch (e) {} }, 300);
+        }
+        area.appendChild(btn('다음', function () { redraw(v, VIEWS.thanks); }));
+      }, own);
+    };
+    pick.onchange = function () {
+      var f = pick.files && pick.files[0];
+      if (f) draw(URL.createObjectURL(f));
+    };
+    draw('');
+  },
+
+  /* 15. 최종 마무리 (감사 인사) */
+  thanks: function (v) {
+    app.appendChild(card(video(v.shorts), el('div', 'bigword', '감사합니다'),
+      btn('돌아가는 길', function () { redraw(v, VIEWS.goback); })));
+  },
+
+  /* 17. 진짜 종료 */
+  bye: function (v) {
+    store(KEY_E, new Date().toDateString());
+    var c = card();
+    c.className = 'card bye';
+    ['감사했습니다.', '수고하셨습니다.', '다음에 다시 만나길 기원합니다.'].forEach(function (t) { c.appendChild(el('p', 'byeline', t)); });
+    c.appendChild(el('p', 'byesign', '- 걸어서 춘천 올림 -'));
+    app.appendChild(c);
+    if (/Android/i.test(navigator.userAgent)) {
+      var hm = el('a', 'btn', '휴대폰 화면으로 나가기');
+      hm.href = 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.HOME;end';
+      hm.target = '_top';
+      app.appendChild(hm);
+    }
+    app.appendChild(el('p', 'small center', '휴대폰의 홈 단추(가운데 ○ 또는 네모)를 누르면 끝납니다.'));
+    setTimeout(byeExit, 300);
+  },
+
+  /* 16. 돌아가는 길 */
+  goback: function (v) {
+    noteCard(v.pid);
+    var o = getOrigin();
+    var far = o && o.lat && v.last && v.last.lat ? km(+v.last.lat, +v.last.lng, +o.lat, +o.lng) : 0;
+    var walk = card(el('h1', '', '왔던 길 걸어서 돌아가기'));
+    if (o && o.lat) {
+      if (far) walk.appendChild(el('p', '', '출발지까지 ' + walkTime(far)));
+      walk.appendChild(link('출발지까지 길 안내 (카카오맵)', kakaoWalk(o.name || '출발지', o.lat, o.lng), 'map'));
+      walk.appendChild(el('p', 'small', '왔던 길과 다른 길로 돌아가시면 또 다른 춘천을 만나실 수 있습니다.'));
+      walk.appendChild(el('p', 'small', '다 보신 뒤 휴대폰의 \'뒤로\' 단추를 누르면 이 화면으로 돌아옵니다. 홈 화면 아이콘을 다시 누르지 않아도 됩니다.'));
+    } else walk.appendChild(el('p', '', '이 휴대폰에 오늘의 출발지가 저장되어 있지 않습니다.'));
+    var car = card(el('h1', '', '차로 돌아가기'),
+      link('택시 부르기 (카카오T 앱)', 'kakaot://', ''),
+      link('전화로 부르기 02-114', 'tel:02-114', 'sub'),
+      el('p', 'small', '02-114는 카카오T가 대신 불러 주는 전화입니다. 오전 8시부터 오후 7시까지.'));
+    if (v.taxi) car.appendChild(link('춘천 콜택시 ' + v.taxi, 'tel:' + v.taxi, 'sub'));
+    var again = card(el('h1', '', '다시 새로 걷기'), el('p', '', '이 자리에서 새 코스로 걷습니다. 선물이 새로 쌓입니다.'),
+      btn('다시 새로 걷기', function () { walkAgain(v); }, 'sub'));
+    if (far >= v.taxiKm) { app.appendChild(car); app.appendChild(walk); }
+    else { app.appendChild(walk); app.appendChild(car); }
+    app.appendChild(again);
+    app.appendChild(btn('오늘 걷기 끝내기', function () { redraw(v, VIEWS.bye); }));
+  }
+};
+
+function walkAgain(v) {
+  var pre = getPre();
+  call('startWalk', [v.pid, pre.who || '', '', pre.plan || '', pre.from || ''], function (r) { if (r) r.again = true; show(r); });
+}
+
+function noteCard(pid) {
+  var inp = el('input'); inp.placeholder = '한 줄 소감 (선택)'; inp.maxLength = 200;
+  var nc = card(el('h2', '', '한 줄 소감'), inp);
+  nc.appendChild(btn('남기기', function () {
+    if (!inp.value.trim()) { inp.focus(); return; }
+    call('leaveNote', [pid, inp.value], function () { nc.innerHTML = ''; nc.appendChild(el('p', '', '고맙습니다. 소감을 잘 받았습니다.')); enable(); });
+  }, 'sub'));
+  app.appendChild(nc);
+}
+
+function testPanel(v) {
+  var c = card(el('h2', '', '시험용 단추'),
+    el('p', 'small', '단추를 누르는 것은 현장에서 그 코드를 찍는 것과 같습니다. 설정 시트의 시험모드가 Y일 때만 보입니다.'));
+  v.test.codes.forEach(function (x) {
+    c.appendChild(btn(x.no + ' 찍기', function () { STORE = ''; CODE = x.key; call('enter', [getPid(), x.key, '']); }, 'sub'));
+  });
+  v.test.stores.forEach(function (s) {
+    c.appendChild(btn('선물코드 찍기 (' + s.name + ')', function () { CODE = ''; STORE = s.key; call('enter', [getPid(), '', s.key]); }, 'sub'));
+  });
+  c.appendChild(btn('처음 화면으로', function () { CODE = ''; STORE = ''; call('enter', [getPid(), '', '']); }, 'sub'));
+  c.appendChild(btn('오늘 기록 지우기', function () { store(KEY_O, ''); store(KEY_P, ''); CODE = ''; STORE = ''; call('testReset', [getPid()]); }, 'sub'));
+  c.appendChild(btn('새 참가자로 처음부터', function () { setPid(''); store(KEY_O, ''); store(KEY_P, ''); CODE = ''; STORE = ''; call('enter', ['', '', '']); }, 'sub'));
+  app.appendChild(c);
+}
+
+call('enter', [getPid(), CODE, STORE, true, store(KEY_E) === new Date().toDateString()]);
+</script>
+</body>
+</html>

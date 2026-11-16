@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>걸어서 춘천 관리</title>
+<meta name="theme-color" content="#1f4e3d">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="걸어서 춘천">
+<script src="config.js"></script>
+<script src="gas-shim.js"></script>
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; font-family: -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; background: #f2f4f1; color: #1f2933; font-size: 17px; }
+#app { max-width: 560px; margin: 0 auto; padding: 12px 12px 40px; }
+.top { display: flex; justify-content: space-between; align-items: center; margin: 4px 2px 12px; }
+.top .t { font-weight: 800; color: #1f4e3d; font-size: 19px; }
+.top .w { font-size: 13px; color: #52606d; text-align: right; }
+.card { background: #fff; border-radius: 14px; padding: 16px; margin: 0 0 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+h1 { font-size: 21px; margin: 0 0 10px; color: #1f4e3d; }
+h2 { font-size: 17px; margin: 0 0 8px; }
+p { margin: 6px 0; line-height: 1.5; }
+.small { font-size: 14px; color: #52606d; }
+.warn { background: #fff4d6; border: 1px solid #f0c75e; color: #7a5300; border-radius: 12px; padding: 12px; margin: 0 0 12px; font-size: 15px; }
+.alertbox { background: #fde8e8; border: 1px solid #e19a9a; color: #8a1c1c; border-radius: 12px; padding: 12px; margin: 0 0 12px; font-size: 15px; white-space: pre-line; }
+.err { color: #b42318; font-size: 15px; margin: 8px 0 0; white-space: pre-line; }
+.ok { color: #1f7a4d; font-size: 15px; margin: 8px 0 0; white-space: pre-line; }
+.nums { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.num { background: #eef5f0; border-radius: 12px; padding: 10px 4px; text-align: center; }
+.num b { display: block; font-size: 26px; color: #1f4e3d; }
+.num span { font-size: 13px; color: #52606d; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tile { background: #fff; border: 0; border-radius: 14px; padding: 18px 8px; font-size: 17px; font-weight: 700; color: #1f4e3d; box-shadow: 0 1px 3px rgba(0,0,0,.1); cursor: pointer; }
+.tile .ic { display: block; font-size: 28px; margin-bottom: 6px; }
+.tile.off { color: #9aa5b1; cursor: default; }
+button.b { display: block; width: 100%; height: 52px; border: 0; border-radius: 12px; background: #1f4e3d; color: #fff; font-size: 17px; font-weight: 700; margin: 8px 0 0; cursor: pointer; }
+button.b.sub { background: #e4ece7; color: #1f4e3d; }
+button.b.red { background: #b42318; }
+button.b:disabled { opacity: .5; }
+input[type=text], input[type=password], textarea { width: 100%; font-size: 17px; padding: 12px; border: 1px solid #cbd2d9; border-radius: 10px; margin: 4px 0 8px; font-family: inherit; }
+textarea { min-height: 110px; }
+label { font-size: 15px; color: #3e4c59; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-top: 1px solid #eef0f2; }
+.row:first-of-type { border-top: 0; }
+.row .l { flex: 1; min-width: 0; }
+.row .l b { display: block; }
+.row .l span { font-size: 13px; color: #52606d; word-break: break-all; }
+.sw { flex: none; min-width: 84px; height: 40px; border: 0; border-radius: 20px; font-size: 15px; font-weight: 700; cursor: pointer; }
+.sw.on { background: #1f7a4d; color: #fff; }
+.sw.off { background: #e4e7eb; color: #52606d; }
+.sw.danger { background: #b42318; color: #fff; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 8px; }
+.chip { border: 1px solid #1f4e3d; background: #fff; color: #1f4e3d; border-radius: 18px; padding: 8px 14px; font-size: 15px; cursor: pointer; }
+.chip.sel { background: #1f4e3d; color: #fff; }
+.copy { font-size: 13px; background: #f5f7fa; border-radius: 8px; padding: 8px; word-break: break-all; margin: 6px 0; user-select: all; }
+.busy { position: fixed; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, #1f4e3d 30%, #a7d3b9 30%); animation: mv 1s linear infinite; background-size: 200% 100%; display: none; }
+@keyframes mv { from { background-position: 0 0; } to { background-position: -200% 0; } }
+</style>
+</head>
+<body>
+<div class="busy" id="busy"></div>
+<div id="app"><p class="small" style="text-align:center;margin-top:60px">불러오는 중입니다.</p></div>
+<script>
+var LINK = (new URLSearchParams(location.search).get('adm') || '').replace(/[^a-z0-9]/g, '').slice(0, 20);
+var app = document.getElementById('app');
+var KEY = 'adm_' + LINK;
+var ME = null;
+
+function store(k, v) { try { if (v === undefined) return localStorage.getItem(k) || ''; if (v === '') localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return ''; } }
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined && text !== null) e.textContent = text; for (var i = 3; i < arguments.length; i++) if (arguments[i]) e.appendChild(arguments[i]); return e; }
+function card() { var c = el('div', 'card'); for (var i = 0; i < arguments.length; i++) if (arguments[i]) c.appendChild(arguments[i]); return c; }
+function btn(text, fn, cls) { var b = el('button', 'b ' + (cls || ''), text); b.onclick = fn; return b; }
+function input(type, ph, val) { var i = el('input'); i.type = type; i.placeholder = ph || ''; if (val) i.value = val; i.autocomplete = 'off'; return i; }
+function clear() { app.innerHTML = ''; window.scrollTo(0, 0); }
+function busy(on) { document.getElementById('busy').style.display = on ? 'block' : 'none'; var bs = document.querySelectorAll('button'); for (var i = 0; i < bs.length; i++) bs[i].disabled = !!on; }
+function header(title) {
+  var t = el('div', 'top', null, el('div', 't', title || '걸어서 춘천 관리'));
+  if (ME) t.appendChild(el('div', 'w', ME.name + ' (' + (ME.role === '마스터' ? '마스터' : '관리자') + ')'));
+  app.appendChild(t);
+}
+function backBtn() { return btn('관리 첫 화면으로', home, 'sub'); }
+
+/* 서버 부르기 */
+function run(fn, args, ok, errBox) {
+  busy(true);
+  var r = google.script.run.withSuccessHandler(function (res) {
+    busy(false);
+    if (res && res.error) {
+      if (res.error === 'LOGIN') { store(KEY, ''); login('다시 로그인해 주십시오.'); return; }
+      if (errBox) errBox.textContent = res.error; else alert(res.error);
+      return;
+    }
+    ok(res);
+  }).withFailureHandler(function (e) {
+    busy(false);
+    var m = '연결이 잠시 끊겼습니다. 다시 눌러 주십시오.';
+    if (errBox) errBox.textContent = m; else alert(m);
+  });
+  r[fn].apply(r, args);
+}
+function api(action, args, ok, errBox) { run('adminApi', [LINK, store(KEY), action, args || {}], ok, errBox); }
+
+/* 처음 마스터 만들기 (?a=setup) */
+function setup() {
+  clear(); header('마스터 관리자 만들기');
+  var code = input('text', '설정 코드'), id = input('text', '아이디 (영문·숫자)'), nm = input('text', '이름'), pw = input('password', '비밀번호 (8자 이상)'), pw2 = input('password', '비밀번호 한 번 더');
+  var err = el('p', 'err');
+  app.appendChild(card(el('p', 'small', '스프레드시트 설정 시트의 "관리자설정코드"를 넣고, 마스터 관리자의 아이디와 비밀번호를 정해 주십시오. 한 번만 할 수 있습니다.'),
+    el('label', '', '설정 코드'), code, el('label', '', '아이디'), id, el('label', '', '이름'), nm, el('label', '', '비밀번호'), pw, pw2,
+    btn('마스터 관리자 만들기', function () {
+      err.textContent = '';
+      if (pw.value !== pw2.value) { err.textContent = '두 비밀번호가 다릅니다.'; return; }
+      run('adminSetup', [code.value, id.value, nm.value, pw.value], function (r) {
+        clear(); header('마스터 관리자 만들기');
+        app.appendChild(card(el('h1', '', '만들었습니다'), el('p', '', '아래가 마스터 관리자 전용 주소입니다. 휴대폰 홈 화면에 추가하거나 따로 적어 두십시오. 이 주소로 들어가 아이디와 비밀번호로 로그인합니다.'),
+          el('div', 'copy', r.link), btn('이 주소로 가기', function () { window.open(r.link, '_top'); })));
+      }, err);
+    }), err));
+}
+
+/* 로그인 */
+function login(msg) {
+  ME = null; clear(); header();
+  var id = input('text', '아이디'), pw = input('password', '비밀번호'), err = el('p', 'err', msg || '');
+  var go = function () {
+    err.textContent = '';
+    run('adminLogin', [LINK, id.value, pw.value], function (r) {
+      store(KEY, r.token);
+      if (r.change) changePw(true); else home();
+    }, err);
+  };
+  pw.onkeydown = function (e) { if (e.key === 'Enter') go(); };
+  app.appendChild(card(el('h1', '', '관리자 로그인'), el('label', '', '아이디'), id, el('label', '', '비밀번호'), pw, btn('로그인', go), err,
+    el('p', 'small', '이 주소는 본인 전용입니다. 다른 사람에게 알려 주지 마십시오. 5번 틀리면 10분 동안 잠깁니다.')));
+}
+
+function changePw(first) {
+  clear(); header();
+  var pw = input('password', '새 비밀번호 (8자 이상)'), pw2 = input('password', '새 비밀번호 한 번 더'), err = el('p', 'err');
+  app.appendChild(card(el('h1', '', first ? '처음 로그인: 비밀번호 바꾸기' : '비밀번호 바꾸기'),
+    first ? el('p', 'small', '마스터 관리자에게 받은 임시 비밀번호를 본인만 아는 비밀번호로 바꿔 주십시오.') : null,
+    pw, pw2, btn('바꾸기', function () {
+      if (pw.value !== pw2.value) { err.textContent = '두 비밀번호가 다릅니다.'; return; }
+      api('changePw', { pw: pw.value }, function () { alert('비밀번호를 바꿨습니다.'); home(); }, err);
+    }), err, first ? null : backBtn()));
+}
+
+/* 관리 첫 화면 */
+var TILES = [
+  { k: '공지', ic: '📢', t: '공지·길 통제', fn: function () { notice(); } },
+  { k: '포인트', ic: '📍', t: '포인트·QR', fn: function () { points(); } },
+  { k: '코스', ic: '🗺️', t: '코스 공개', fn: function () { courses(); } },
+  { k: '선물처', ic: '🎁', t: '선물처', fn: function () { stores(); } },
+  { k: '관리자', ic: '👥', t: '관리자 관리', fn: function () { admins(); } }
+];
+var LATER = [['🚶', '답사 모드'], ['🎬', '쇼츠 창고'], ['✍️', '문구 관리'], ['📊', '통계']];
+
+function home() {
+  api('home', {}, function (r) {
+    ME = r; clear(); header();
+    if (r.env) app.appendChild(el('div', 'warn', '[' + r.env + '] 개발 환경입니다. 여기서 만든 자료는 운영에 자동으로 옮겨지지 않습니다.'));
+    if (r.test) app.appendChild(el('div', 'warn', '시험모드가 켜져 있습니다. 실제 공개 전에 설정 시트의 "시험모드"를 비워 주십시오.'));
+    if (r.autoWipe) app.appendChild(el('div', 'warn', '자동기록지우기가 켜져 있습니다(시험 기간용). 실제 공개 전에 비워 주십시오.'));
+    if (r.alert) app.appendChild(el('div', 'alertbox', '지금 올라가 있는 긴급 공지\n' + r.alert));
+    var n = el('div', 'nums');
+    [['신청', r.count.join], ['걷기 시작', r.count.start], ['마침', r.count.done], ['선물 사용', r.count.gift]].forEach(function (x) { n.appendChild(el('div', 'num', null, el('b', '', String(x[1])), el('span', '', x[0]))); });
+    app.appendChild(card(el('h2', '', '오늘'), n));
+    var g = el('div', 'grid');
+    TILES.forEach(function (t) {
+      if (r.perms.indexOf(t.k) < 0) return;
+      var b = el('button', 'tile', null, el('span', 'ic', t.ic), document.createTextNode(t.t));
+      b.onclick = t.fn; g.appendChild(b);
+    });
+    LATER.forEach(function (x) { g.appendChild(el('button', 'tile off', null, el('span', 'ic', x[0]), document.createTextNode(x[1] + ' (준비 중)'))); });
+    app.appendChild(g);
+    app.appendChild(btn('비밀번호 바꾸기', function () { changePw(false); }, 'sub'));
+    app.appendChild(btn('로그아웃', function () { api('logout', {}, function () { store(KEY, ''); login(''); }); }, 'sub'));
+  });
+}
+
+function sw(on, labels, fn, danger) {
+  var b = el('button', 'sw ' + (on ? (danger ? 'danger' : 'on') : 'off'), on ? labels[0] : labels[1]);
+  b.onclick = fn; return b;
+}
+function row(title, sub, right) { return el('div', 'row', null, el('div', 'l', null, el('b', '', title), sub ? el('span', '', sub) : null), right); }
+
+/* 공지·길 통제 */
+function notice() {
+  api('notice', {}, function (r) {
+    clear(); header('공지·길 통제');
+    var tx = el('textarea'); tx.value = r.text; tx.placeholder = '예: 폭우로 공지천 산책로가 통제 중입니다. 다른 길로 걸어 주세요.';
+    var lk = input('text', '자세히 볼 주소 (춘천시 공지 등, 선택)', r.link), msg = el('p', 'ok');
+    app.appendChild(card(el('h1', '', '긴급 공지'), el('p', 'small', '적어서 올리면 방문자가 화면을 열 때마다 팝업과 빨간 띠로 바로 보입니다.'), tx, lk,
+      btn('공지 올리기', function () { api('setNotice', { text: tx.value, link: lk.value }, function () { msg.textContent = tx.value.trim() ? '공지를 올렸습니다.' : '공지를 내렸습니다.'; }); }),
+      btn('공지 내리기', function () { tx.value = ''; lk.value = ''; api('setNotice', { text: '', link: '' }, function () { msg.textContent = '공지를 내렸습니다.'; }); }, 'sub'), msg));
+    var c = card(el('h1', '', '길 통제'), el('p', 'small', '통제한 길은 방문자 화면의 길 고르기에서 빠집니다. 한 포인트의 길이 모두 통제되면 "통제 중" 안내와 마치기만 보입니다.'));
+    if (!r.roads.length) c.appendChild(el('p', 'small', '길 시트에 길이 없습니다.'));
+    r.roads.forEach(function (x) {
+      var b = sw(x.closed, ['통제 중', '열림'], function () { api('setRoad', { no: x.no, closed: !x.closed }, function () { notice(); }); }, true);
+      c.appendChild(row(x.aName.replace(/^\(예시\)\s*/, '') + ' ↔ ' + x.bName.replace(/^\(예시\)\s*/, ''), x.no + (x.course ? ' · ' + x.course : '') + (x.on ? '' : ' · 사용 안 함'), b));
+    });
+    app.appendChild(c);
+    app.appendChild(backBtn());
+  });
+}
+
+/* 포인트·QR */
+function points() {
+  api('points', {}, function (r) {
+    clear(); header('포인트·QR');
+    var c = card(el('h1', '', '포인트(QR코드)'), el('p', 'small', '끄면 방문자에게 숨겨지고, 찍으면 "준비 중인 길"로 나옵니다. QR코드는 그대로 두고 끄기만 하므로 기록이 남습니다.'));
+    r.list.forEach(function (p) {
+      var b = sw(p.on, ['켜짐', '꺼짐'], function () { api('setPoint', { no: p.no, on: !p.on }, function () { points(); }); });
+      var box = row(p.no + (p.name ? ' ' + p.name.replace(/^\(예시\)\s*/, '') : ''), '오늘 ' + p.today + '번 찍힘 · 이어진 길 ' + p.roads + '개' + (p.hasPos ? '' : ' · 위치 없음'), b);
+      c.appendChild(box);
+      if (p.url) {
+        var u = el('div', 'copy', p.url); u.style.display = 'none';
+        var t = el('button', 'chip', 'QR 주소 보기'); t.onclick = function () { u.style.display = u.style.display === 'none' ? 'block' : 'none'; };
+        c.appendChild(t); c.appendChild(u);
+      }
+    });
+    app.appendChild(c);
+    app.appendChild(el('p', 'small', 'QR코드 인쇄물(PDF)은 도메인을 정한 뒤 만듭니다. 그 전에는 주소만 확인합니다.'));
+    app.appendChild(backBtn());
+  });
+}
+
+/* 코스 공개 */
+function courses() {
+  api('courses', {}, function (r) {
+    clear(); header('코스 공개');
+    var c = card(el('h1', '', '코스'), el('p', 'small', '만드는 중인 코스는 "숨김"으로 두십시오. 공개하면 그 코스의 길이 방문자에게 보입니다. 길이와 시간은 길 시트에서 자동으로 계산합니다.'));
+    if (!r.list.length) c.appendChild(el('p', 'small', '코스 시트에 코스가 없습니다.'));
+    r.list.forEach(function (x) {
+      var b = sw(x.on, ['공개', '숨김'], function () { api('setCourse', { no: x.no, on: !x.on }, function () { courses(); }); });
+      c.appendChild(row((x.name || x.no).replace(/^\(예시\)\s*/, ''), x.no + (x.km ? ' · ' + x.km + 'km' : '') + (x.min ? ' · ' + x.min + '분' : '') + (x.points ? ' · ' + x.points : ''), b));
+    });
+    app.appendChild(c);
+    app.appendChild(backBtn());
+  });
+}
+
+/* 선물처 */
+function stores() {
+  api('stores', {}, function (r) {
+    clear(); header('선물처');
+    var c = card(el('h1', '', '선물처'), el('p', 'small', '"오늘 마감"은 오늘만 선물 목록에서 빠지고 내일 저절로 풀립니다. "쉼"은 다시 켤 때까지 빠집니다.'));
+    if (!r.list.length) c.appendChild(el('p', 'small', '매장 시트에 선물처가 없습니다.'));
+    r.list.forEach(function (s) {
+      var right = el('div', '', null);
+      right.style.display = 'flex'; right.style.flexDirection = 'column'; right.style.gap = '6px';
+      right.appendChild(sw(s.on, ['운영', '쉼'], function () { api('setStore', { no: s.no, field: 'on', value: !s.on }, function () { stores(); }); }));
+      right.appendChild(sw(s.closed, ['오늘 마감', '마감 안 함'], function () { api('setStore', { no: s.no, field: 'closed', value: !s.closed }, function () { stores(); }); }, true));
+      c.appendChild(row(s.name.replace(/^\(예시\)\s*/, ''), s.no + ' · 오늘 선물 ' + s.used + (s.limit ? '/' + s.limit : '') + '건' + (s.hours ? ' · ' + s.hours : ''), right));
+    });
+    app.appendChild(c);
+    app.appendChild(backBtn());
+  });
+}
+
+/* 관리자 관리 (마스터) */
+function permChips(all, sel) {
+  var box = el('div', 'chips'), picked = sel.slice();
+  all.forEach(function (p) {
+    var ch = el('button', 'chip' + (picked.indexOf(p) >= 0 ? ' sel' : ''), p);
+    ch.onclick = function () { var i = picked.indexOf(p); if (i >= 0) picked.splice(i, 1); else picked.push(p); ch.className = 'chip' + (picked.indexOf(p) >= 0 ? ' sel' : ''); };
+    box.appendChild(ch);
+  });
+  box.value = function () { return picked; };
+  return box;
+}
+
+function shown(title, lines) {
+  var c = card(el('h1', '', title));
+  lines.forEach(function (l) { if (l[0]) c.appendChild(el('label', '', l[0])); c.appendChild(el('div', 'copy', l[1])); });
+  c.appendChild(el('p', 'small', '임시 비밀번호는 지금 한 번만 보입니다. 주소와 함께 그분께 직접 전해 주십시오. 처음 로그인하면 본인 비밀번호로 바꾸게 됩니다.'));
+  c.appendChild(btn('확인', admins));
+  clear(); header('관리자 관리'); app.appendChild(c);
+}
+
+function admins() {
+  api('admins', {}, function (r) {
+    clear(); header('관리자 관리');
+    var id = input('text', '아이디 (영문·숫자)'), nm = input('text', '이름'), pc = permChips(r.perms, []), err = el('p', 'err');
+    app.appendChild(card(el('h1', '', '관리자 등록'), el('label', '', '아이디'), id, el('label', '', '이름'), nm, el('label', '', '맡길 일'), pc,
+      btn('등록하고 주소 만들기', function () {
+        api('addAdmin', { id: id.value, name: nm.value, perms: pc.value() }, function (x) {
+          shown('등록했습니다', [['관리자 주소', x.link], ['아이디', x.id], ['임시 비밀번호', x.temp]]);
+        }, err);
+      }), err));
+    var c = card(el('h1', '', '관리자 목록'));
+    r.list.forEach(function (m) {
+      var box = el('div', 'card');
+      box.style.boxShadow = 'none'; box.style.border = '1px solid #e4e7eb';
+      box.appendChild(el('h2', '', m.name + ' (' + m.id + ')' + (m.role === '마스터' ? ' · 마스터' : '')));
+      box.appendChild(el('p', 'small', '상태: ' + m.state + (m.change ? ' · 비밀번호 아직 안 바꿈' : '') + ' · 마지막 접속: ' + (m.last || '없음')));
+      if (m.role !== '마스터') {
+        var pc2 = permChips(r.perms, m.perms);
+        box.appendChild(el('label', '', '맡긴 일'));
+        box.appendChild(pc2);
+        box.appendChild(btn('맡긴 일 저장', function () { api('editAdmin', { id: m.id, what: 'perms', perms: pc2.value() }, function () { alert('저장했습니다.'); admins(); }); }, 'sub'));
+        box.appendChild(m.state === '사용'
+          ? btn('사용 중지 (바로 막기)', function () { if (confirm(m.name + '님을 사용 중지할까요? 로그인한 휴대폰도 바로 막힙니다.')) api('editAdmin', { id: m.id, what: 'stop' }, function () { admins(); }); }, 'red')
+          : btn('다시 사용', function () { api('editAdmin', { id: m.id, what: 'start' }, function () { admins(); }); }));
+        box.appendChild(btn('주소 새로 만들기 (예전 주소 막기)', function () { if (confirm('예전 주소는 더 이상 열리지 않습니다. 새로 만들까요?')) api('editAdmin', { id: m.id, what: 'link' }, function (x) { shown('새 주소', [['관리자 주소', x.link]]); }); }, 'sub'));
+      }
+      box.appendChild(btn('임시 비밀번호 새로 주기', function () { if (confirm('비밀번호를 새로 정할까요? 로그인한 휴대폰은 다시 로그인해야 합니다.')) api('editAdmin', { id: m.id, what: 'reset' }, function (x) { if (m.id === ME.id) { store(KEY, ''); } shown('임시 비밀번호', [['아이디', m.id], ['임시 비밀번호', x.temp]]); }); }, 'sub'));
+      var u = el('div', 'copy', m.link); u.style.display = 'none';
+      var t = el('button', 'chip', '주소 보기'); t.onclick = function () { u.style.display = u.style.display === 'none' ? 'block' : 'none'; };
+      box.appendChild(t); box.appendChild(u);
+      c.appendChild(box);
+    });
+    app.appendChild(c);
+    app.appendChild(backBtn());
+  });
+}
+
+if (LINK === 'setup') setup();
+else if (store(KEY)) home();
+else login('');
+</script>
+</body>
+</html>
