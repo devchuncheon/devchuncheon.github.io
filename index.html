@@ -898,13 +898,17 @@ var VIEWS = {
     ['감사했습니다.', '수고하셨습니다.', '다음에 다시 만나길 기원합니다.'].forEach(function (t) { c.appendChild(el('p', 'byeline', t)); });
     c.appendChild(el('p', 'byesign', '- 걸어서 춘천 올림 -'));
     app.appendChild(c);
-    if (/Android/i.test(navigator.userAgent)) {
-      var hm = el('a', 'btn', '휴대폰 화면으로 나가기');
-      hm.href = 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.HOME;end';
-      hm.target = '_top';
-      app.appendChild(hm);
-    }
-    app.appendChild(el('p', 'small center', '휴대폰의 홈 단추(가운데 ○ 또는 네모)를 누르면 끝납니다.'));
+    /* 웹 화면은 휴대폰 홈 화면으로 보낼 수 없음(안드로이드 홈 이동 링크는 크롬이 막음).
+       '화면 닫기'는 창 닫기를 한 번 시도하고, 닫히지 않으면 홈 단추 안내를 크게 보여 줌 */
+    var tip = el('div', 'guide', '휴대폰의 홈 단추(가운데 ○ 또는 네모)를 누르면 끝납니다.');
+    app.appendChild(btn('화면 닫기', function () {
+      try { window.close(); } catch (e) {}
+      setTimeout(function () {
+        tip.textContent = '이 화면은 스스로 닫을 수 없습니다. 휴대폰의 홈 단추(가운데 ○ 또는 네모)를 눌러 주십시오.';
+        tip.style.background = '#fff7e0'; tip.style.borderColor = '#e3c35a';
+      }, 400);
+    }));
+    app.appendChild(tip);
     setTimeout(byeExit, 300);
   },
 
