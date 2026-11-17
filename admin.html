@@ -65,6 +65,11 @@ label { font-size: 15px; color: #3e4c59; }
 .pin { background: #1f7a4d; color: #fff; border-radius: 50%; width: 30px; height: 30px; line-height: 26px; text-align: center; font-size: 11px; font-weight: 700; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
 .pin.x { background: #534ab7; border-radius: 7px; }
 .askbg { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.ckl { margin-top: 4px; line-height: 1.9; }
+.ck { display: inline-block; font-size: 13px; border-radius: 6px; padding: 0 6px; margin: 0 4px 0 0; white-space: nowrap; }
+.ck.ok { background: #e3f1e8; color: #1f7a4d; }
+.ck.no { background: #fde8e8; color: #b42318; font-weight: 700; }
+.ck.skip { background: #eef0f2; color: #7b8794; }
 .askbox { background: #fff; border-radius: 14px; padding: 16px; width: 100%; max-width: 420px; white-space: pre-line; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 </style>
 </head>
@@ -302,6 +307,55 @@ function ask(o, cb) {
   if (inp) setTimeout(function () { inp.focus(); }, 50);
 }
 
+/* 빠진 것 표시: ✓ 붙어 있음 / ✗ 아직 없음 / — 일부러 뺌 */
+var CKMARK = { ok: '✓', no: '✗', skip: '—' };
+function ckEl(chk) { var d = el('div', 'ckl'); (chk || []).forEach(function (c) { d.appendChild(el('span', 'ck ' + c.s, c.k + ' ' + CKMARK[c.s])); }); return d; }
+function ckMiss(chk) { return (chk || []).filter(function (c) { return c.s === 'no'; }).length; }
+
+/* 포인트 정보 (2단계): 표시 이름·성격·의도·설명·찾는 법, 포인트 단계, 빠진 것 */
+function pointForm(cno, no, msg) {
+  api('dPoint', { no: no }, function (r) {
+    dropMap(); clear(); header(r.no + ' 포인트');
+    app.appendChild(card(el('h1', '', r.no + ' ' + (noEx(r.name) || '(이름 없음)')),
+      el('p', 'small', '지나는 코스: ' + (r.courses.length ? r.courses.join('·') : '없음') + (r.courses.length > 1 ? ' (갈림길)' : '') + ' · 단계: ' + r.stage + (r.lat ? '' : ' · 위치 없음')),
+      ckEl(r.chk)));
+    var nm = input('text', '예: 석사천 징검다리', noEx(r.name)), kc = permChips(r.allKinds, r.kinds), pu = el('textarea'), de = el('textarea'), fd = el('textarea'), err = el('p', 'err'), ok = el('p', 'ok', msg || '');
+    pu.placeholder = '이 포인트를 넣은 까닭, 답사 때 확인할 것'; de.placeholder = '방문자에게 보여 줄 이 자리의 설명'; fd.placeholder = 'QR이 붙은 자리를 찾는 법 (예: 벤치 옆 기둥)';
+    pu.value = r.purpose; de.value = noEx(r.desc); fd.value = noEx(r.find);
+    app.appendChild(card(el('h2', '', '포인트 정보'),
+      el('label', '', '표시 이름 (방문자 화면에 보이는 이름)'), nm,
+      el('label', '', '성격 (여러 개 고를 수 있음)'), kc,
+      el('label', '', '의도 (설계·답사용, 방문자에게 안 보임)'), pu,
+      el('label', '', '설명 (방문자에게 보임)'), de,
+      el('label', '', '찾는 법'), fd,
+      btn('저장', function () {
+        api('dSavePoint', { no: r.no, name: nm.value, kinds: kc.value(), purpose: pu.value, desc: de.value, find: fd.value }, function () { pointForm(cno, r.no, '저장했습니다.'); }, err);
+      }), err, ok));
+    var cc = card(el('h2', '', '빠진 것'), el('p', 'small', '✗ 표시가 할 일입니다. 이 포인트에 필요 없는 항목은 "안 씀"을 누르면 —로 바뀌고 빠진 것으로 세지 않습니다. 사진·쇼츠는 4번 "콘텐츠 붙이기"에서 채웁니다.'));
+    r.chk.forEach(function (c) {
+      var right = null;
+      if (c.can && c.s !== 'ok') {
+        right = el('button', 'sw ' + (c.s === 'skip' ? 'on' : 'off'), c.s === 'skip' ? '되살리기' : '안 씀');
+        right.onclick = function () { api('dPointSkip', { no: r.no, item: c.k, skip: c.s !== 'skip' }, function () { pointForm(cno, r.no); }); };
+      }
+      cc.appendChild(row(c.k + ' ' + CKMARK[c.s], c.s === 'ok' ? '붙어 있음' : c.s === 'skip' ? '일부러 뺌' : '아직 없음', right));
+    });
+    app.appendChild(cc);
+    var chips = el('div', 'chips');
+    r.stages.forEach(function (s) {
+      var ch = el('button', 'chip' + (s === r.stage ? ' sel' : ''), s);
+      ch.onclick = function () {
+        if (s === r.stage) return;
+        ask({ text: r.no + ' 포인트 단계를 "' + s + '"(으)로 바꿀까요?', btns: [['바꾸기', 'ok'], ['취소', null]] }, function () { api('dPointStage', { no: r.no, stage: s }, function () { pointForm(cno, r.no); }); });
+      };
+      chips.appendChild(ch);
+    });
+    app.appendChild(card(el('h2', '', '포인트 단계'), el('p', 'small', '확인한 뒤 손으로 넘깁니다.'), chips));
+    if (cno) app.appendChild(btn(cno + '코스 지도로 돌아가기', function () { courseMap(cno); }, 'sub'));
+    app.appendChild(btn('관리 첫 화면으로', home, 'sub'));
+  });
+}
+
 function designList() {
   dropMap();
   api('dCourses', {}, function (r) {
@@ -343,8 +397,9 @@ function courseMap(no, keepView) {
     r.all.forEach(function (p) { byNo[p.no] = p; });
     r.points.forEach(function (n, i) { inC[n] = i + 1; });
     var again = function () { courseMap(r.no, true); };
+    var miss = 0; r.points.forEach(function (n) { if (byNo[n]) miss += ckMiss(byNo[n].chk); });
     app.appendChild(card(el('h1', '', r.no + ' ' + noEx(r.name)),
-      el('p', 'small', '단계: ' + r.stage + ' · 포인트 ' + r.points.length + '개' + (r.km ? ' · ' + r.km + 'km' : '') + (r.min ? ' · 약 ' + r.min + '분' : '') + (r.on ? ' · 방문자에게 공개 중' : ' · 방문자에게 숨김')),
+      el('p', 'small', '단계: ' + r.stage + ' · 포인트 ' + r.points.length + '개' + (r.points.length ? ' · 빠진 것 ' + miss + '개' : '') + (r.km ? ' · ' + r.km + 'km' : '') + (r.min ? ' · 약 ' + r.min + '분' : '') + (r.on ? ' · 방문자에게 공개 중' : ' · 방문자에게 숨김')),
       r.purpose ? el('p', 'small', '의도: ' + r.purpose) : null, r.desc ? el('p', 'small', r.desc) : null));
     var md = el('div'); md.id = 'map';
     app.appendChild(card(el('h2', '', '2. 지도에서 포인트 찍기'),
@@ -412,13 +467,13 @@ function courseMap(no, keepView) {
         };
         bx.appendChild(b);
       });
-      var nb = el('button', 'sw off', '이름'); nb.style.minWidth = '44px';
-      nb.onclick = function () {
-        ask({ text: n + ' 포인트 이름', input: '예: 석사천 징검다리', value: noEx(p.name), btns: [['저장', 'ok'], ['취소', null]] }, function (v, name) { api('dPointName', { no: n, name: name }, again); });
-      };
+      var nb = el('button', 'sw on', '정보'); nb.style.minWidth = '52px';
+      nb.onclick = function () { pointForm(r.no, n); };
       bx.appendChild(nb);
       var sub = (i === 0 ? '시작 · ' : i === r.points.length - 1 ? '마침 · ' : '') + (p.stage || '임시') + (p.courses.length > 1 ? ' · 갈림길(' + p.courses.join('·') + ')' : '') + (p.lat === null ? ' · 위치 없음' : '');
-      lc.appendChild(row((i + 1) + '. ' + n + ' ' + (noEx(p.name) || '(이름 없음)'), sub, bx));
+      var rw = row((i + 1) + '. ' + n + ' ' + (noEx(p.name) || '(이름 없음)'), sub, bx);
+      rw.querySelector('.l').appendChild(ckEl(p.chk));
+      lc.appendChild(rw);
     });
     app.appendChild(lc);
     var chips = el('div', 'chips');
