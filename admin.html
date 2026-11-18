@@ -212,7 +212,7 @@ function changePw(first) {
 
 /* 관리 첫 화면: 큰 단추 6개 (2026-11-16, 기획 원본 슬라이드 순서) */
 var TILES = [
-  { k: '코스', ic: '🗺️', t: '코스 설계', top: function (c) { courseStats(c); }, items: [['코스 만들기·고치기 (지도)', function () { designList(); }], ['코스 공개·숨김', function () { courses(); }], ['코스 미리보기'], ['코스 내보내기']] },
+  { k: '코스', ic: '🗺️', t: '코스 설계', top: function (c) { courseStats(c); }, items: [['코스 만들기·고치기 (지도)', function () { designList(); }], ['코스 공개·숨김', function () { courses(); }, '코스 테스트 (가능·준비 중)'], ['코스 내보내기']] }, // 코스 미리보기는 지운 메뉴 (2026-11-18, 코스 만들기로 확인)
   { k: '포인트', ic: '📍', t: '포인트', items: [['포인트·QR 켜기·끄기', function () { points(); }], ['포인트 미리보기'], ['선물처·홍보처·휴식처']] },
   { k: '콘텐츠', ic: '🎬', t: '콘텐츠', items: [['콘텐츠 붙이기'], ['콘텐츠 창고'], ['유튜브 주소 가져오기']] },
   { k: '답사', ic: '🚶', t: '답사', items: [['답사 시작 (휴대폰)'], ['임시 추가 확정']] },
@@ -255,7 +255,7 @@ function tileMenu(t, from) {
   var c = card(el('h1', '', t.ic + ' ' + t.t));
   if (t.top) t.top(c);
   t.items.forEach(function (x) {
-    var b = el('button', 'b' + (x[1] ? '' : ' sub'), x[0] + (x[1] ? '' : ' (준비 중)'));
+    var b = el('button', 'b' + (x[1] ? '' : ' sub'), ((isDev() && x[2]) || x[0]) + (x[1] ? '' : ' (만들기 전)'));
     if (x[1]) b.onclick = x[1]; else b.disabled = true;
     c.appendChild(b);
   });
@@ -341,14 +341,17 @@ function points() {
   });
 }
 
-/* 코스 공개 */
+/* 코스 공개·숨김 — 개발 환경에서는 "코스 테스트(가능·준비 중)": 개발 방문자 화면에서 걸어 보는 시험용 (2026-11-18 대표 결정) */
+function isDev() { return !!(ME && ME.env); }
+function onLabel(on) { return isDev() ? (on ? '테스트 가능' : '테스트 준비 중') : (on ? '방문자에게 공개 중' : '방문자에게 숨김'); }
 function courses() {
   api('courses', {}, function (r) {
-    clear(); header('코스 공개');
-    var c = card(el('h1', '', '코스'), el('p', 'small', '만드는 중인 코스는 "숨김"으로 두십시오. 공개하면 그 코스의 길이 방문자에게 보입니다. 길이와 시간은 길 시트에서 자동으로 계산합니다.'));
+    var dev = isDev();
+    clear(); header(dev ? '코스 테스트' : '코스 공개');
+    var c = card(el('h1', '', dev ? '코스 테스트 (가능·준비 중)' : '코스'), el('p', 'small', dev ? '개발 방문자 화면에서 걸어 볼 코스를 "가능"으로 둡니다. 다 만들지 않은 코스는 "준비 중"으로 두면 시험하는 사람의 갈림길 선택지에 나오지 않습니다. 실제 서비스 공개는 코스를 내보낸 뒤 운영 관리자 툴에서 따로 정합니다. (포인트는 포인트 메뉴에서 켭니다.)' : '만드는 중인 코스는 "숨김"으로 두십시오. 공개하면 그 코스의 길이 방문자에게 보입니다. 길이와 시간은 길 시트에서 자동으로 계산합니다.'));
     if (!r.list.length) c.appendChild(el('p', 'small', '코스 시트에 코스가 없습니다.'));
     r.list.forEach(function (x) {
-      var b = sw(x.on, ['공개', '숨김'], function () { api('setCourse', { no: x.no, on: !x.on }, function () { courses(); }); });
+      var b = sw(x.on, dev ? ['가능', '준비 중'] : ['공개', '숨김'], function () { api('setCourse', { no: x.no, on: !x.on }, function () { courses(); }); });
       c.appendChild(row((x.name || x.no).replace(/^\(예시\)\s*/, ''), x.no + (x.km ? ' · ' + x.km + 'km' : '') + (x.min ? ' · ' + x.min + '분' : '') + (x.points ? ' · ' + x.points : ''), b));
     });
     app.appendChild(c);
@@ -466,7 +469,7 @@ function designList() {
     if (!r.list.length) c.appendChild(el('p', 'small', '아직 코스가 없습니다.'));
     r.list.forEach(function (x) {
       var b = el('button', 'sw on', '열기'); b.onclick = function () { courseMap(x.no); };
-      c.appendChild(row(x.no + ' ' + noEx(x.name), '포인트 ' + x.n + '개' + (x.km ? ' · ' + x.km + 'km' : '') + (x.min ? ' · 약 ' + x.min + '분' : '') + ' · ' + x.stage + (x.on ? ' · 방문자에게 공개 중' : ''), b));
+      c.appendChild(row(x.no + ' ' + noEx(x.name), '포인트 ' + x.n + '개' + (x.km ? ' · ' + x.km + 'km' : '') + (x.min ? ' · 약 ' + x.min + '분' : '') + ' · ' + x.stage + (x.on ? ' · ' + onLabel(true) : ''), b));
     });
     app.appendChild(c);
     app.appendChild(btn('+ 새 코스 만들기', function () { courseForm(null); }));
@@ -502,7 +505,7 @@ function courseMap(no, keepView) {
     var again = function () { courseMap(r.no, true); };
     var miss = 0; uniq.forEach(function (n) { if (byNo[n]) miss += ckMiss(byNo[n].chk); });
     app.appendChild(card(el('h1', '', r.no + ' ' + noEx(r.name)),
-      el('p', 'small', '단계: ' + r.stage + ' · 포인트 ' + uniq.length + '개' + (loop ? ' (시작으로 돌아오는 코스)' : '') + (uniq.length ? ' · 빠진 것 ' + miss + '개' : '') + (r.km ? ' · ' + r.km + 'km' : '') + (r.min ? ' · 약 ' + r.min + '분' : '') + (r.on ? ' · 방문자에게 공개 중' : ' · 방문자에게 숨김')),
+      el('p', 'small', '단계: ' + r.stage + ' · 포인트 ' + uniq.length + '개' + (loop ? ' (시작으로 돌아오는 코스)' : '') + (uniq.length ? ' · 빠진 것 ' + miss + '개' : '') + (r.km ? ' · ' + r.km + 'km' : '') + (r.min ? ' · 약 ' + r.min + '분' : '') + ' · ' + onLabel(r.on)),
       r.purpose ? el('p', 'small', '의도: ' + r.purpose) : null, r.desc ? el('p', 'small', r.desc) : null));
     var md = el('div'); md.id = 'map';
     app.appendChild(card(el('h2', '', '2. 지도에서 포인트 찍기'),
@@ -611,7 +614,7 @@ function courseMap(no, keepView) {
       };
       chips.appendChild(ch);
     });
-    app.appendChild(card(el('h2', '', '코스 단계'), el('p', 'small', '확인한 뒤 손으로 넘깁니다. 방문자에게 보이는 것은 "코스 공개·숨김"에서 따로 정합니다.'), chips));
+    app.appendChild(card(el('h2', '', '코스 단계'), el('p', 'small', '확인한 뒤 손으로 넘깁니다. ' + (isDev() ? '개발 화면에서 걸어 보는 것은 "코스 테스트"에서 따로 정합니다.' : '방문자에게 보이는 것은 "코스 공개·숨김"에서 따로 정합니다.')), chips));
     app.appendChild(btn('코스 설명 고치기', function () { courseForm(r); }, 'sub'));
     app.appendChild(btn('이 코스 삭제', function () {
       ask({ text: r.no + '코스를 삭제할까요?\n코스와 그 길이 지워지고, 이 코스에만 있던 포인트도 지워집니다 (QR 설치 단계 포인트는 "꺼짐"으로 남음). 되돌릴 수 없습니다.', btns: [['삭제', 'ok', 'red'], ['취소', null]] }, function () {
