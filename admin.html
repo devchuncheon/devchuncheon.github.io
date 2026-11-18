@@ -67,9 +67,9 @@ label { font-size: 15px; color: #3e4c59; }
 .askbg { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .pl { white-space: pre-line; }
 .circles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; justify-items: center; }
-.circ { width: 76px; height: 76px; border-radius: 50%; background: #eef5f0; border: 2px solid #1f4e3d; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.circ { width: 78px; height: 78px; border-radius: 50%; background: #eef5f0; border: 2px solid #1f4e3d; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .circ b { font-size: 24px; color: #1f4e3d; line-height: 1.1; }
-.circ span { font-size: 12px; color: #52606d; }
+.circ span { font-size: 11px; color: #52606d; white-space: nowrap; letter-spacing: -0.5px; }
 .grp { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #eef0f2; }
 .grp:first-child { border-top: 0; }
 .gl { flex: none; width: 62px; font-size: 19px; font-weight: 800; color: #1f4e3d; }
@@ -211,7 +211,7 @@ var TILES = [
 /* 첫 화면 묶음 (2026-11-18 대표 그림 → 단추로 아래 단계에 들어감) */
 var GROUPS = [
   { t: '코스', ic: '🗺️', cls: 'c-course', items: [
-    { k: '코스', t: '코스 설계', ic: '🗺️', d: '지도에서 코스·포인트 만들기' },
+    { k: '코스', t: '코스 설계', ic: '🗺️', d: '지도에서 코스 만들기' },
     { k: '포인트', t: '포인트', ic: '📍', d: 'QR 켜기·끄기, 미리보기' },
     { k: '답사', t: '답사', ic: '🚶', d: '현장에서 위치·사진 모으기' },
     { k: '콘텐츠', t: '콘텐츠', ic: '🎬', d: '쇼츠·사진 붙이기' }] },
