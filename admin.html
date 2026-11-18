@@ -64,6 +64,11 @@ label { font-size: 15px; color: #3e4c59; }
 #map { height: 400px; border-radius: 12px; margin: 8px 0; background: #e8ece9; }
 .pin { background: #1f7a4d; color: #fff; border-radius: 50%; width: 30px; height: 30px; line-height: 26px; text-align: center; font-size: 11px; font-weight: 700; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
 .pin.x { background: #534ab7; border-radius: 7px; }
+.pin.off { background: #9aa5b1; }
+.pin.miss::after { content: ''; position: absolute; right: -3px; top: -3px; width: 11px; height: 11px; border-radius: 50%; background: #e02424; border: 2px solid #fff; }
+.pin { position: relative; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: #52606d; margin: 4px 0 0; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
 .askbg { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .pl { white-space: pre-line; }
 .circles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; justify-items: center; }
@@ -213,7 +218,7 @@ function changePw(first) {
 /* 관리 첫 화면: 큰 단추 6개 (2026-11-16, 기획 원본 슬라이드 순서) */
 var TILES = [
   { k: '코스', ic: '🗺️', t: '코스 설계', top: function (c) { courseStats(c); }, items: [['코스 만들기·고치기 (지도)', function () { designList(); }], ['코스 공개·숨김', function () { courses(); }, '코스 테스트 (가능·준비 중)'], ['코스 내보내기']] }, // 코스 미리보기는 지운 메뉴 (2026-11-18, 코스 만들기로 확인)
-  { k: '포인트', ic: '📍', t: '포인트', items: [['포인트·QR 켜기·끄기', function () { points(); }], ['포인트 미리보기'], ['선물처·홍보처·휴식처']] },
+  { k: '포인트', ic: '📍', t: '포인트', items: [['포인트 관리 (코스 지도)', function () { pointCourses(); }], ['모든 포인트 목록 (켜기·끄기)', function () { points(); }], ['포인트 미리보기'], ['선물처·홍보처·휴식처']] },
   { k: '콘텐츠', ic: '🎬', t: '콘텐츠', items: [['콘텐츠 붙이기'], ['콘텐츠 창고'], ['유튜브 주소 가져오기']] },
   { k: '답사', ic: '🚶', t: '답사', items: [['답사 시작 (휴대폰)'], ['임시 추가 확정']] },
   { k: '운영', ic: '🛠️', t: '운영', items: [['긴급공지·길 통제', function () { notice(); }], ['선물처 운영·오늘 마감', function () { stores(); }], ['운영 조건·상황 단추']] },
@@ -224,7 +229,7 @@ var TILES = [
 var GROUPS = [
   { t: '코스', ic: '🗺️', cls: 'c-course', items: [
     { k: '코스', t: '코스 설계', ic: '🗺️', d: '지도에서 코스 만들기' },
-    { k: '포인트', t: '포인트', ic: '📍', d: 'QR 켜기·끄기, 미리보기' },
+    { k: '포인트', t: '포인트', ic: '📍', d: '코스 지도로 포인트 상황·관리' },
     { k: '답사', t: '답사', ic: '🚶', d: '현장에서 위치·사진 모으기' },
     { k: '콘텐츠', t: '콘텐츠', ic: '🎬', d: '쇼츠·사진 붙이기' }] },
   { t: '통계', ic: '📊', cls: 'c-stat', items: [
@@ -441,7 +446,8 @@ function pointForm(cno, no, msg) {
       chips.appendChild(ch);
     });
     app.appendChild(card(el('h2', '', '포인트 단계'), el('p', 'small', '확인한 뒤 손으로 넘깁니다.'), chips));
-    if (cno) app.appendChild(btn(cno + '코스 지도로 돌아가기', function () { courseMap(cno); }, 'sub'));
+    if (PF_FROM === 'p') app.appendChild(btn(cno ? cno + '코스 포인트 관리로 돌아가기' : '포인트 관리로 돌아가기', function () { if (cno) pointCourse(cno); else pointCourses(); }, 'sub'));
+    else if (cno) app.appendChild(btn(cno + '코스 지도로 돌아가기', function () { courseMap(cno); }, 'sub'));
     app.appendChild(btn('관리 첫 화면으로', home, 'sub'));
   });
 }
@@ -494,6 +500,7 @@ function courseForm(c) {
 }
 
 function courseMap(no, keepView) {
+  PF_FROM = 'c';
   api('dCourse', { no: no }, function (r) {
     var view = keepView && MAP ? { c: MAP.getCenter(), z: MAP.getZoom() } : null;
     dropMap();
@@ -623,6 +630,104 @@ function courseMap(no, keepView) {
     }, 'red'));
     app.appendChild(btn('코스 목록으로', designList, 'sub'));
     app.appendChild(btn('관리 첫 화면으로', function () { dropMap(); home(); }, 'sub'));
+    setTimeout(function () { if (MAP) MAP.invalidateSize(); }, 300);
+  });
+}
+
+/* 포인트 관리 (포인트 메뉴, 2026-11-18 대표 요청): 코스를 고르면 코스 지도에 포인트 상황을 보여 주고 거기서 관리. 자리·순서는 코스 만들기에서만 바꿈 */
+var PF_FROM = '';
+function pointCourses() {
+  PF_FROM = 'p'; dropMap();
+  api('pCourses', {}, function (r) {
+    clear(); header('포인트 관리');
+    var c = card(el('h1', '', '📍 포인트 관리'), el('p', 'small', '코스를 고르면 지도에 그 코스의 포인트 상황이 나옵니다. 포인트 자리와 순서는 코스 설계의 "코스 만들기"에서 바꿉니다.'));
+    if (!r.list.length) c.appendChild(el('p', 'small', '아직 코스가 없습니다.'));
+    r.list.forEach(function (x) {
+      var b = el('button', 'sw on', '열기'); b.onclick = function () { pointCourse(x.no); };
+      c.appendChild(row(x.no + ' ' + noEx(x.name), '포인트 ' + x.n + '개 · 켜짐 ' + x.on + '개 · 빠진 것 ' + x.miss + '개 · ' + x.stage + ' · ' + onLabel(x.test), b));
+    });
+    app.appendChild(c);
+    if (r.orphans.length) {
+      var o = card(el('h2', '', '어느 코스에도 없는 포인트'), el('p', 'small', '코스를 지우거나 코스에서 뺀 뒤 남은 포인트입니다. 필요 없으면 지우십시오(QR을 이미 붙였다면 현장 QR을 먼저 떼십시오).'));
+      r.orphans.forEach(function (p) {
+        var rw = pointLine(p, null, function () { pointCourses(); });
+        var d = el('button', 'sw danger', '지우기'); d.style.minWidth = '52px';
+        d.onclick = function () { ask({ text: p.no + ' ' + (noEx(p.name) || '') + ' 포인트를 지울까요?\n어느 코스에도 없는 포인트입니다. 적어 둔 정보도 함께 지워지고 되돌릴 수 없습니다. 번호는 다시 쓰지 않습니다.', btns: [['지우기', 'ok', 'red'], ['취소', null]] }, function () { api('pDrop', { no: p.no, force: true }, function () { pointCourses(); }); }); };
+        rw.lastChild.appendChild(d);
+        o.appendChild(rw);
+      });
+      app.appendChild(o);
+    }
+    app.appendChild(backBtn());
+  });
+}
+/* 포인트 한 줄: 번호·이름, 단계·켜짐·오늘 찍힌 수·갈림길, 빠진 것, [켜짐/꺼짐] [정보] */
+function pointLine(p, cno, again, prefix) {
+  var bx = el('div', ''); bx.style.display = 'flex'; bx.style.gap = '4px'; bx.style.flexWrap = 'wrap'; bx.style.justifyContent = 'flex-end';
+  bx.appendChild(sw(p.on, ['켜짐', '꺼짐'], function () { api('setPoint', { no: p.no, on: !p.on }, again); }));
+  var ib = el('button', 'sw on', '정보'); ib.style.minWidth = '52px'; ib.onclick = function () { dropMap(); pointForm(cno, p.no); }; bx.appendChild(ib);
+  var sub = (p.stage || '임시') + (p.courses.length > 1 ? ' · 갈림길(' + p.courses.join('·') + ')' : '') + ' · 오늘 ' + p.today + '번' + (p.lat === null ? ' · 위치 없음' : '');
+  var rw = row((prefix || '') + p.no + ' ' + (noEx(p.name) || '(이름 없음)'), sub, bx);
+  rw.querySelector('.l').appendChild(ckEl(p.chk));
+  return rw;
+}
+function pointCourse(no, keepView) {
+  PF_FROM = 'p';
+  api('pCourse', { no: no }, function (r) {
+    var view = keepView && MAP ? { c: MAP.getCenter(), z: MAP.getZoom() } : null;
+    dropMap(); clear(); header(r.no + '코스 포인트');
+    var again = function () { pointCourse(r.no, true); };
+    var pos = {}; r.order.forEach(function (n, i) { (pos[n] = pos[n] || []).push(i + 1); });
+    var on = r.points.filter(function (p) { return p.on; }).length, miss = 0;
+    r.points.forEach(function (p) { miss += ckMiss(p.chk); });
+    app.appendChild(card(el('h1', '', r.no + ' ' + noEx(r.name)),
+      el('p', 'small', '포인트 ' + r.points.length + '개 · 켜짐 ' + on + '개 · 꺼짐 ' + (r.points.length - on) + '개 · 빠진 것 ' + miss + '개' + (r.km ? ' · ' + r.km + 'km' : '') + ' · ' + r.stage + ' · ' + onLabel(r.test))));
+    var md = el('div'); md.id = 'map';
+    var lg = el('div', 'legend'); [['#1f7a4d', '켜짐'], ['#9aa5b1', '꺼짐'], ['#534ab7', '갈림길(네모)'], ['#e02424', '빨간 점 = 빠진 것 있음']].forEach(function (x) { var s = el('span', '', x[1]); var i = el('i'); i.style.background = x[0]; s.insertBefore(i, s.firstChild); lg.appendChild(s); });
+    app.appendChild(card(el('h2', '', '지도'), el('p', 'small', '포인트를 누르면 상황을 보고 켜기·끄기, 정보 고치기를 할 수 있습니다.'), md, lg));
+    if (typeof L === 'undefined') md.textContent = '지도를 불러오지 못했습니다.';
+    else {
+      MAP = L.map(md);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(MAP);
+      var by = {}; r.points.forEach(function (p) { by[p.no] = p; });
+      var line = []; r.order.forEach(function (n) { var p = by[n]; if (p && p.lat !== null) line.push([p.lat, p.lng]); });
+      if (line.length > 1) L.polyline(line, { color: '#1f7a4d', weight: 5, opacity: 0.6 }).addTo(MAP);
+      r.points.forEach(function (p) {
+        if (p.lat === null) return;
+        var m = ckMiss(p.chk), cls = 'pin' + (p.courses.length > 1 ? ' x' : '') + (p.on ? '' : ' off') + (m ? ' miss' : '');
+        var ic = L.divIcon({ className: '', html: '<div class="' + cls + '">' + p.no + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+        var mk = L.marker([p.lat, p.lng], { icon: ic }).addTo(MAP);
+        mk.bindTooltip(pos[p.no].join('·') + '번째 · ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)') + (p.on ? ' · 켜짐' : ' · 꺼짐'));
+        mk.on('click', function () {
+          var txt = p.no + ' ' + (noEx(p.name) || '(이름 없음)') + '\n' + pos[p.no].join('·') + '번째 · ' + (p.stage || '임시') + ' · ' + (p.on ? '켜짐' : '꺼짐') + ' · 오늘 ' + p.today + '번'
+            + (p.courses.length > 1 ? '\n갈림길: ' + p.courses.join('·') + '코스' : '')
+            + '\n' + p.chk.map(function (c) { return c.k + ' ' + CKMARK[c.s]; }).join('  ');
+          ask({ text: txt, btns: [[p.on ? '끄기' : '켜기', 'tog', p.on ? 'red' : ''], ['정보 고치기', 'info'], ['QR 주소 보기', 'qr', 'sub'], ['닫기', null]] }, function (v) {
+            if (v === 'tog') api('setPoint', { no: p.no, on: !p.on }, again);
+            else if (v === 'info') { dropMap(); pointForm(r.no, p.no); }
+            else if (v === 'qr') ask({ text: p.no + ' QR 주소\n' + (p.url || '(키가 없습니다)'), btns: [['닫기', null]] });
+          });
+        });
+      });
+      if (view) MAP.setView(view.c, view.z);
+      else if (line.length > 1) MAP.fitBounds(line, { padding: [40, 40] });
+      else if (line.length === 1) MAP.setView(line[0], 16);
+      else MAP.setView(CHUN, 14);
+    }
+    var lc = card(el('h2', '', '포인트 (걷는 순서)'));
+    if (!r.points.length) lc.appendChild(el('p', 'small', '이 코스에 포인트가 없습니다. 코스 설계의 "코스 만들기"에서 지도에 찍어 주십시오.'));
+    r.points.forEach(function (p) { lc.appendChild(pointLine(p, r.no, again, pos[p.no].join('·') + '. ')); });
+    if (r.points.length) {
+      var bb = el('div', 'botrow');
+      bb.appendChild(btn('모두 켜기', function () { api('pSetMany', { course: r.no, on: true }, again); }));
+      bb.appendChild(btn('모두 끄기', function () {
+        ask({ text: r.no + '코스의 포인트를 모두 끌까요?\n다른 코스와 함께 쓰는 포인트(갈림길)도 꺼져서 그 코스에서도 안 보이게 됩니다.', btns: [['모두 끄기', 'ok', 'red'], ['취소', null]] }, function () { api('pSetMany', { course: r.no, on: false }, again); });
+      }, 'sub'));
+      lc.appendChild(bb);
+    }
+    app.appendChild(lc);
+    app.appendChild(btn('다른 코스 고르기', pointCourses, 'sub'));
+    app.appendChild(backBtn());
     setTimeout(function () { if (MAP) MAP.invalidateSize(); }, 300);
   });
 }
