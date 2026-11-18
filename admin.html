@@ -69,6 +69,8 @@ label { font-size: 15px; color: #3e4c59; }
 .legend i.sq { border-radius: 3px; background: #fff !important; border: 2px solid #52606d; width: 10px; height: 10px; }
 .pin.miss::after { content: ''; position: absolute; right: -3px; top: -3px; width: 11px; height: 11px; border-radius: 50%; background: #e02424; border: 2px solid #fff; }
 .pin { position: relative; }
+#printArea { display: none; }
+@media print { body > *:not(#printArea) { display: none !important; } #printArea { display: grid !important; grid-template-columns: 1fr 1fr; gap: 10mm; padding: 8mm; } #printArea .pt { grid-column: 1 / -1; font-size: 14pt; font-weight: 700; } #printArea .pcard { border: 1px dashed #999; border-radius: 4mm; padding: 6mm; text-align: center; break-inside: avoid; } #printArea .pq svg { width: 60mm; height: 60mm; } #printArea .pn { font-size: 16pt; font-weight: 800; margin-top: 3mm; } #printArea .pb { font-size: 10pt; color: #555; } }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: #52606d; margin: 4px 0 0; }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
 .askbg { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -333,7 +335,7 @@ function points() {
     clear(); header('포인트·QR');
     var c = card(el('h1', '', '포인트(QR코드)'), el('p', 'small', '끄면 방문자에게 숨겨지고, 찍으면 "준비 중인 길"로 나옵니다. QR코드는 그대로 두고 끄기만 하므로 기록이 남습니다.'));
     r.list.forEach(function (p) {
-      var b = sw(p.on, ['켜짐', '꺼짐'], function () { api('setPoint', { no: p.no, on: !p.on }, function () { points(); }); });
+      var b = sw(p.on, ['사용', '미사용'], function () { api('setPoint', { no: p.no, on: !p.on }, function () { points(); }); });
       var box = row(p.no + (p.name ? ' ' + p.name.replace(/^\(예시\)\s*/, '') : ''), '오늘 ' + p.today + '번 찍힘 · 이어진 길 ' + p.roads + '개' + (p.hasPos ? '' : ' · 위치 없음'), b);
       c.appendChild(box);
       if (p.url) {
@@ -421,7 +423,7 @@ function pointForm(cno, no, msg) {
     pu.value = r.purpose; de.value = noEx(r.desc); fd.value = noEx(r.find);
     app.appendChild(card(el('h2', '', '포인트 정보'),
       el('label', '', '표시 이름 (방문자 화면에 보이는 이름)'), nm,
-      el('label', '', '성격 (여러 개 고를 수 있음)'), kc,
+      el('label', '', '용도 (여러 개 고를 수 있음)'), kc,
       el('label', '', '의도 (설계·답사용, 방문자에게 안 보임)'), pu,
       el('label', '', '설명 (방문자에게 보임)'), de,
       el('label', '', '찾는 법'), fd,
@@ -511,6 +513,7 @@ function courseMap(no, keepView) {
     r.all.forEach(function (p) { byNo[p.no] = p; });
     r.points.forEach(function (n, i) { (inC[n] = inC[n] || []).push(i + 1); });
     var uniq = Object.keys(inC);
+    COURSE_ORDER = (r.lines || []).map(function (l) { return l.no; });
     var again = function () { courseMap(r.no, true); };
     var miss = 0; uniq.forEach(function (n) { if (byNo[n]) miss += ckMiss(byNo[n].chk); });
     app.appendChild(card(el('h1', '', r.no + ' ' + noEx(r.name)),
@@ -519,13 +522,15 @@ function courseMap(no, keepView) {
     var md = el('div'); md.id = 'map';
     app.appendChild(card(el('h2', '', '2. 지도에서 포인트 찍기'),
       el('p', 'small pl', '걷는 순서대로 지도를 누르십시오. 누른 자리에 새 포인트가 생겨 코스 끝에 이어집니다.\n· 초록 포인트는 끌어서 자리를 옮길 수 있습니다.\n· 이 코스의 포인트(예: 시작)를 누르면 마지막 포인트로 다시 넣어 돌아오는 코스를 만들 수 있습니다.\n· 회색 점(다른 코스의 포인트)을 누르면 그 포인트를 이 코스에 넣을 수 있습니다.'),
-      md, el('p', 'small', '초록 = 이 코스 · 보라 네모 = 다른 코스도 지나는 갈림길 · 회색 = 다른 코스의 포인트')));
+      md, el('p', 'small', '초록 = 이 코스(작성 중) · 보라 네모 = 다른 코스도 지나는 갈림길 · 회색 = 다른 코스의 포인트'), lineLegend(r.lines, r.no, true)));
     if (typeof L === 'undefined') md.textContent = '지도를 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 열어 주십시오.';
     else {
       MAP = L.map(md);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(MAP);
       var line = [];
       r.points.forEach(function (n) { var p = byNo[n]; if (p && p.lat !== null) line.push([p.lat, p.lng]); });
+      COURSE_ORDER = r.lines.map(function (l) { return l.no; });
+      drawOtherLines(r.lines, r.no);
       if (line.length > 1) L.polyline(line, { color: '#1f7a4d', weight: 5, opacity: 0.85 }).addTo(MAP);
       var addPt = function (o) { o.course = r.no; api('dAddPoint', o, again); };
       var askName = function (lat, lng) {
@@ -604,7 +609,7 @@ function courseMap(no, keepView) {
         };
         bx.appendChild(b);
       });
-      var nb = el('button', 'sw on', '정보'); nb.style.minWidth = '52px';
+      var nb = el('button', 'sw on', '내용'); nb.style.minWidth = '52px';
       nb.onclick = function () { pointForm(r.no, n); };
       bx.appendChild(nb);
       var role = i === 0 ? '시작 · ' : i === r.points.length - 1 ? (n === r.points[0] ? '마침 (시작으로 돌아옴) · ' : '마침 · ') : '';
@@ -636,6 +641,72 @@ function courseMap(no, keepView) {
   });
 }
 
+/* 코스마다 다른 색 연결선 (2026-11-18 대표 요청). 코스 작성 중인 코스는 초록 그대로 */
+var COURSE_COLORS = ['#e8590c', '#1c7ed6', '#ae3ec9', '#f08c00', '#d6336c', '#1098ad', '#5f3dc4', '#c2255c', '#364fc7', '#a61e4d'];
+var COURSE_ORDER = [];
+function courseColor(no) {
+  if (/^\(예시\)|^코스-/.test(no)) return '#868e96';
+  var real = COURSE_ORDER.filter(function (x) { return !/^코스-/.test(x); }), i = real.indexOf(no);
+  if (i < 0) { i = 0; for (var k = 0; k < no.length; k++) i += no.charCodeAt(k); }
+  return COURSE_COLORS[i % COURSE_COLORS.length];
+}
+function drawOtherLines(lines, cur) {
+  (lines || []).forEach(function (l) {
+    if (l.no === cur || l.path.length < 2) return;
+    L.polyline(l.path, { color: courseColor(l.no), weight: 4, opacity: 0.6, dashArray: '8 6' }).addTo(MAP).bindTooltip(l.no + ' ' + noEx(l.name));
+  });
+}
+function lineLegend(lines, cur, writing) {
+  var d = el('div', 'legend');
+  (lines || []).forEach(function (l) {
+    if (l.path.length < 2 && l.no !== cur) return;
+    var s = el('span', '', l.no + ' ' + noEx(l.name) + (l.no === cur ? (writing ? ' (작성 중)' : ' (이 코스)') : ''));
+    var i = el('i'); i.style.background = (l.no === cur && writing) ? '#1f7a4d' : courseColor(l.no); i.style.borderRadius = '2px'; i.style.height = '5px'; i.style.width = '18px'; i.style.verticalAlign = '3px';
+    s.insertBefore(i, s.firstChild); if (l.no === cur) s.style.fontWeight = '700'; d.appendChild(s);
+  });
+  return d;
+}
+
+/* QR 보기·인쇄·다시 만들기·지우기 (2026-11-18, 대표가 써 보고 정하기로). QR 그림은 qrcode-generator(jsdelivr)를 필요할 때 불러 만듦 */
+function loadQR(cb) {
+  if (window.qrcode) { cb(); return; }
+  var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+  s.onload = function () { cb(); }; s.onerror = function () { alert('QR 그리는 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주십시오.'); };
+  document.head.appendChild(s);
+}
+function qrSvg(url, cell) { var q = qrcode(0, 'M'); q.addData(url); q.make(); return q.createSvgTag({ cellSize: cell || 6, margin: 2, scalable: true }); }
+function qrView(p, cno) {
+  clear(); header(p.no + ' QR');
+  var box = el('div', ''); box.style.textAlign = 'center';
+  var c = card(el('h1', '', p.no + ' ' + (noEx(p.name) || '(이름 없음)')), el('p', 'small', (isDev() ? '개발 주소로 만든 시험용 QR입니다. 정식 QR은 운영 주소로 따로 만듭니다.' : '') + (p.on ? '' : ' 지금 미사용이라 찍어도 쓰이지 않는 포인트로 나옵니다.')), box);
+  app.appendChild(c);
+  if (!p.url) box.appendChild(el('p', 'err', '이 포인트에는 QR이 없습니다(지운 상태). 아래 "QR 다시 만들기"로 새로 만들 수 있습니다.'));
+  else loadQR(function () { var w = el('div', ''); w.style.maxWidth = '260px'; w.style.margin = '0 auto'; w.innerHTML = qrSvg(p.url, 8); box.appendChild(w); box.appendChild(el('div', 'copy', p.url)); });
+  if (p.url) app.appendChild(btn('인쇄', function () { printQR([p], ''); }));
+  app.appendChild(btn('QR 다시 만들기 (예전 QR 막기)', function () {
+    ask({ text: p.no + ' 포인트의 QR을 새로 만들까요?\n예전 QR(이미 붙인 것 포함)은 더 이상 열리지 않습니다.', btns: [['새로 만들기', 'ok', 'red'], ['취소', null]] }, function () { api('pQrKey', { no: p.no, op: 'new' }, function (x) { p.url = x.url; qrView(p, cno); }); });
+  }, 'sub'));
+  if (p.url) app.appendChild(btn('QR 지우기', function () {
+    ask({ text: p.no + ' 포인트의 QR을 지울까요?\n이 QR을 찍으면 쓰이지 않는 코드로 나옵니다. 포인트와 내용은 그대로 남고, 나중에 "QR 다시 만들기"로 새 QR을 만들 수 있습니다.', btns: [['지우기', 'ok', 'red'], ['취소', null]] }, function () { api('pQrKey', { no: p.no, op: 'del' }, function () { p.url = ''; qrView(p, cno); }); });
+  }, 'red'));
+  app.appendChild(btn(cno ? cno + '코스 포인트 관리로 돌아가기' : '포인트 관리로 돌아가기', function () { if (cno) pointCourse(cno); else pointCourses(); }, 'sub'));
+}
+function printQR(list, title) {
+  if (!list.length) { alert('인쇄할 QR이 없습니다.'); return; }
+  loadQR(function () {
+    var old = document.getElementById('printArea'); if (old) old.parentNode.removeChild(old);
+    var pa = el('div'); pa.id = 'printArea';
+    if (title) pa.appendChild(el('div', 'pt', title + ' — QR ' + list.length + '개'));
+    list.forEach(function (p) {
+      var cd = el('div', 'pcard'); var q = el('div', 'pq'); q.innerHTML = qrSvg(p.url, 6);
+      cd.appendChild(q); cd.appendChild(el('div', 'pn', p.no + ' ' + (noEx(p.name) || ''))); cd.appendChild(el('div', 'pb', '걸어서 춘천' + (isDev() ? ' · 시험용' : '')));
+      pa.appendChild(cd);
+    });
+    document.body.appendChild(pa);
+    setTimeout(function () { window.print(); }, 300);
+  });
+}
+
 /* 포인트 관리 (포인트 메뉴, 2026-11-18 대표 요청): 코스를 고르면 코스 지도에 포인트 상황을 보여 주고 거기서 관리. 자리·순서는 코스 만들기에서만 바꿈 */
 var PF_FROM = '';
 function pointCourses() {
@@ -646,7 +717,7 @@ function pointCourses() {
     if (!r.list.length) c.appendChild(el('p', 'small', '아직 코스가 없습니다.'));
     r.list.forEach(function (x) {
       var b = el('button', 'sw on', '열기'); b.onclick = function () { pointCourse(x.no); };
-      c.appendChild(row(x.no + ' ' + noEx(x.name), '포인트 ' + x.n + '개 · 켜짐 ' + x.on + '개 · 빠진 것 ' + x.miss + '개 · ' + x.stage + ' · ' + onLabel(x.test), b));
+      c.appendChild(row(x.no + ' ' + noEx(x.name), '포인트 ' + x.n + '개 · 사용 ' + x.on + '개 · 빠진 것 ' + x.miss + '개 · ' + x.stage + ' · ' + onLabel(x.test), b));
     });
     app.appendChild(c);
     if (r.orphans.length) {
@@ -666,8 +737,9 @@ function pointCourses() {
 /* 포인트 한 줄: 번호·이름, 단계·켜짐·오늘 찍힌 수·갈림길, 빠진 것, [켜짐/꺼짐] [정보] */
 function pointLine(p, cno, again, prefix) {
   var bx = el('div', ''); bx.style.display = 'flex'; bx.style.gap = '4px'; bx.style.flexWrap = 'wrap'; bx.style.justifyContent = 'flex-end';
-  bx.appendChild(sw(p.on, ['켜짐', '꺼짐'], function () { api('setPoint', { no: p.no, on: !p.on }, again); }));
-  var ib = el('button', 'sw on', '정보'); ib.style.minWidth = '52px'; ib.onclick = function () { dropMap(); pointForm(cno, p.no); }; bx.appendChild(ib);
+  bx.appendChild(sw(p.on, ['사용', '미사용'], function () { api('setPoint', { no: p.no, on: !p.on }, again); }));
+  var ib = el('button', 'sw on', '내용'); ib.style.minWidth = '52px'; ib.onclick = function () { dropMap(); pointForm(cno, p.no); }; bx.appendChild(ib);
+  var qb = el('button', 'sw off', 'QR'); qb.style.minWidth = '48px'; qb.onclick = function () { dropMap(); qrView(p, cno); }; bx.appendChild(qb);
   var sub = (p.stage || '임시') + (p.courses.length > 1 ? ' · 갈림길(' + p.courses.join('·') + ')' : '') + ' · 오늘 ' + p.today + '번' + (p.lat === null ? ' · 위치 없음' : '');
   var rw = row((prefix || '') + p.no + ' ' + (noEx(p.name) || '(이름 없음)'), sub, bx);
   rw.querySelector('.l').appendChild(ckEl(p.chk));
@@ -680,34 +752,35 @@ function pointCourse(no, keepView) {
     dropMap(); clear(); header(r.no + '코스 포인트');
     var again = function () { pointCourse(r.no, true); };
     var pos = {}; r.order.forEach(function (n, i) { (pos[n] = pos[n] || []).push(i + 1); });
-    var on = r.points.filter(function (p) { return p.on; }).length, miss = 0;
+    var on = r.points.filter(function (p) { return p.on; }).length, miss = 0; COURSE_ORDER = r.lines.map(function (l) { return l.no; });
     r.points.forEach(function (p) { miss += ckMiss(p.chk); });
     app.appendChild(card(el('h1', '', r.no + ' ' + noEx(r.name)),
-      el('p', 'small', '포인트 ' + r.points.length + '개 · 켜짐 ' + on + '개 · 꺼짐 ' + (r.points.length - on) + '개 · 빠진 것 ' + miss + '개' + (r.km ? ' · ' + r.km + 'km' : '') + ' · ' + r.stage + ' · ' + onLabel(r.test))));
+      el('p', 'small', '포인트 ' + r.points.length + '개 · 사용 ' + on + '개 · 미사용 ' + (r.points.length - on) + '개 · 빠진 것 ' + miss + '개' + (r.km ? ' · ' + r.km + 'km' : '') + ' · ' + r.stage + ' · ' + onLabel(r.test))));
     var md = el('div'); md.id = 'map';
-    var lg = el('div', 'legend'); [['#1f7a4d', '켜짐'], ['#9aa5b1', '꺼짐'], ['sq', '네모 = 갈림길'], ['#e02424', '빨간 점 = 빠진 것 있음']].forEach(function (x) { var s = el('span', '', x[1]); var i = el('i', x[0] === 'sq' ? 'sq' : ''); if (x[0] !== 'sq') i.style.background = x[0]; s.insertBefore(i, s.firstChild); lg.appendChild(s); });
-    app.appendChild(card(el('h2', '', '지도'), el('p', 'small', '포인트를 누르면 상황을 보고 켜기·끄기, 정보 고치기를 할 수 있습니다.'), md, lg));
+    var lg = el('div', 'legend'); [['#1f7a4d', '사용'], ['#9aa5b1', '미사용'], ['sq', '네모 = 갈림길'], ['#e02424', '빨간 점 = 빠진 것 있음']].forEach(function (x) { var s = el('span', '', x[1]); var i = el('i', x[0] === 'sq' ? 'sq' : ''); if (x[0] !== 'sq') i.style.background = x[0]; s.insertBefore(i, s.firstChild); lg.appendChild(s); });
+    app.appendChild(card(el('h2', '', '지도'), el('p', 'small', '포인트를 누르면 상황을 보고 사용·미사용, 내용 고치기, QR을 할 수 있습니다. 선은 코스마다 다른 색입니다.'), md, lg, lineLegend(r.lines, r.no, false)));
     if (typeof L === 'undefined') md.textContent = '지도를 불러오지 못했습니다.';
     else {
       MAP = L.map(md);
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(MAP);
       var by = {}; r.points.forEach(function (p) { by[p.no] = p; });
       var line = []; r.order.forEach(function (n) { var p = by[n]; if (p && p.lat !== null) line.push([p.lat, p.lng]); });
-      if (line.length > 1) L.polyline(line, { color: '#1f7a4d', weight: 5, opacity: 0.6 }).addTo(MAP);
+      drawOtherLines(r.lines, r.no);
+      if (line.length > 1) L.polyline(line, { color: courseColor(r.no), weight: 6, opacity: 0.9 }).addTo(MAP);
       r.points.forEach(function (p) {
         if (p.lat === null) return;
         var m = ckMiss(p.chk), cls = 'pin' + (p.courses.length > 1 ? ' sq' : '') + (p.on ? '' : ' off') + (m ? ' miss' : '');
         var ic = L.divIcon({ className: '', html: '<div class="' + cls + '">' + p.no + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
         var mk = L.marker([p.lat, p.lng], { icon: ic }).addTo(MAP);
-        mk.bindTooltip(pos[p.no].join('·') + '번째 · ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)') + (p.on ? ' · 켜짐' : ' · 꺼짐'));
+        mk.bindTooltip(pos[p.no].join('·') + '번째 · ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)') + (p.on ? ' · 사용' : ' · 미사용'));
         mk.on('click', function () {
-          var txt = p.no + ' ' + (noEx(p.name) || '(이름 없음)') + '\n' + pos[p.no].join('·') + '번째 · ' + (p.stage || '임시') + ' · ' + (p.on ? '켜짐' : '꺼짐') + ' · 오늘 ' + p.today + '번'
+          var txt = p.no + ' ' + (noEx(p.name) || '(이름 없음)') + '\n' + pos[p.no].join('·') + '번째 · ' + (p.stage || '임시') + ' · ' + (p.on ? '사용' : '미사용') + ' · 오늘 ' + p.today + '번'
             + (p.courses.length > 1 ? '\n갈림길: ' + p.courses.join('·') + '코스' : '')
             + '\n' + p.chk.map(function (c) { return c.k + ' ' + CKMARK[c.s]; }).join('  ');
-          ask({ text: txt, btns: [[p.on ? '끄기' : '켜기', 'tog', p.on ? 'red' : ''], ['정보 고치기', 'info'], ['QR 주소 보기', 'qr', 'sub'], ['닫기', null]] }, function (v) {
+          ask({ text: txt, btns: [[p.on ? '미사용으로' : '사용으로', 'tog', p.on ? 'red' : ''], ['내용 고치기', 'info'], ['QR 보기·인쇄', 'qr', 'sub'], ['닫기', null]] }, function (v) {
             if (v === 'tog') api('setPoint', { no: p.no, on: !p.on }, again);
             else if (v === 'info') { dropMap(); pointForm(r.no, p.no); }
-            else if (v === 'qr') ask({ text: p.no + ' QR 주소\n' + (p.url || '(키가 없습니다)'), btns: [['닫기', null]] });
+            else if (v === 'qr') { dropMap(); qrView(p, r.no); }
           });
         });
       });
@@ -721,11 +794,12 @@ function pointCourse(no, keepView) {
     r.points.forEach(function (p) { lc.appendChild(pointLine(p, r.no, again, pos[p.no].join('·') + '. ')); });
     if (r.points.length) {
       var bb = el('div', 'botrow');
-      bb.appendChild(btn('모두 켜기', function () { api('pSetMany', { course: r.no, on: true }, again); }));
-      bb.appendChild(btn('모두 끄기', function () {
-        ask({ text: r.no + '코스의 포인트를 모두 끌까요?\n다른 코스와 함께 쓰는 포인트(갈림길)도 꺼져서 그 코스에서도 안 보이게 됩니다.', btns: [['모두 끄기', 'ok', 'red'], ['취소', null]] }, function () { api('pSetMany', { course: r.no, on: false }, again); });
+      bb.appendChild(btn('모두 사용', function () { api('pSetMany', { course: r.no, on: true }, again); }));
+      bb.appendChild(btn('모두 미사용', function () {
+        ask({ text: r.no + '코스의 포인트를 모두 미사용으로 할까요?\n다른 코스와 함께 쓰는 포인트(갈림길)도 미사용이 되어 그 코스에서도 안 보이게 됩니다.', btns: [['모두 미사용', 'ok', 'red'], ['취소', null]] }, function () { api('pSetMany', { course: r.no, on: false }, again); });
       }, 'sub'));
       lc.appendChild(bb);
+      lc.appendChild(btn('이 코스 QR 모두 인쇄', function () { printQR(r.points.filter(function (p) { return p.url; }), r.no + ' ' + noEx(r.name)); }, 'sub'));
     }
     app.appendChild(lc);
     app.appendChild(btn('다른 코스 고르기', pointCourses, 'sub'));
