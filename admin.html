@@ -1143,7 +1143,7 @@ function svItems(p, i) {
     svKillMap(); clear(); header(p.no + ' 답사 자료'); SV.ui = {};
     var c = card(el('h1', '', p.no + ' ' + (noEx(p.name) || '')), el('p', 'small', '서버(답사 시트·드라이브)에 올라간 자료 ' + r.list.length + '개 — 새것이 위'));
     r.list.forEach(function (x) {
-      var a = null; if (x.url) { a = el('a', 'sw on', '열기'); a.href = x.url; a.target = '_blank'; a.style.textDecoration = 'none'; }
+      var a = null; if (x.url) { a = el('button', 'sw on', '열기'); a.onclick = function () { window.open(x.url, '_blank'); }; }
       c.appendChild(row(x.kind + ' · ' + String(x.at).slice(5, 16), (x.cno ? x.cno + '코스 · ' : '') + (x.text ? String(x.text).slice(0, 60) + ' · ' : '') + x.who, a));
     });
     app.appendChild(c);
