@@ -120,6 +120,36 @@ label { font-size: 15px; color: #3e4c59; }
 .ck.no { background: #fde8e8; color: #b42318; font-weight: 700; }
 .ck.skip { background: #eef0f2; color: #7b8794; }
 .askbox { background: #fff; border-radius: 14px; padding: 16px; width: 100%; max-width: 420px; white-space: pre-line; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+/* 답사 (2026-11-18) */
+.svguide { position: sticky; top: 0; z-index: 1100; background: #fff; border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+.svtop { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.svnext { font-size: 15px; font-weight: 700; color: #1f4e3d; }
+.svdist { font-size: 34px; font-weight: 800; color: #1f4e3d; line-height: 1.2; }
+.svarrow { width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; transition: transform .25s; flex: none; }
+.svwarn { background: #fde8e8; color: #b42318; border-radius: 8px; padding: 8px 10px; margin-top: 6px; font-weight: 700; white-space: pre-line; }
+.svok { background: #e3f4ea; color: #1f7a4d; border-radius: 8px; padding: 8px 10px; margin-top: 6px; font-weight: 700; }
+.svnav { display: flex; gap: 6px; margin-top: 8px; }
+.svnav .b { margin: 0; padding: 10px 4px; font-size: 14px; }
+.svrow { cursor: pointer; border-radius: 8px; }
+.svrow.near { background: #fff4d6; }
+.svrow.tg b { color: #d9480f; }
+.svd { color: #1f4e3d; font-weight: 700; }
+.pin.tg { background: #d9480f; transform: scale(1.2); }
+.svgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.svgrid .b { margin: 0; }
+.svcam { position: fixed; inset: 0; background: #000; z-index: 2000; display: flex; flex-direction: column; }
+.svcam video { flex: 1; width: 100%; min-height: 0; object-fit: cover; }
+.svcam .bar { display: flex; justify-content: space-around; align-items: center; padding: 14px; gap: 10px; }
+.svcam .bar .b { width: auto; min-width: 84px; margin: 0; }
+.svcam.flash video { opacity: .3; }
+.svcinfo { color: #fff; text-align: center; padding: 10px; font-size: 15px; }
+.svshot { width: 76px; height: 76px; border-radius: 50%; border: 6px solid #ccc; background: #fff; padding: 0; }
+.svrec { background: rgba(0,0,0,.85); justify-content: center; align-items: center; padding: 16px; }
+.svrbox { background: #fff; border-radius: 16px; padding: 18px; width: 100%; max-width: 420px; text-align: center; }
+.svrbox .svcinfo { color: #1f4e3d; }
+.svrtime { font-size: 44px; font-weight: 800; color: #1f4e3d; margin: 8px 0; }
+.svrec.on .svrtime { color: #d92d20; }
+.askbg { z-index: 4000; }
 </style>
 </head>
 <body>
@@ -224,7 +254,7 @@ var TILES = [
   { k: '코스', ic: '🗺️', t: '코스 설계', top: function (c) { courseStats(c); }, items: [['코스 만들기·고치기 (지도)', function () { designList(); }], ['코스 공개·숨김', function () { courses(); }, '코스 테스트 (가능·준비 중)'], ['코스 내보내기']] }, // 코스 미리보기는 지운 메뉴 (2026-11-18, 코스 만들기로 확인)
   { k: '포인트', ic: '📍', t: '포인트', items: [['포인트 관리 (코스 지도)', function () { pointCourses(); }]] }, // 포인트 목록·포인트 미리보기·선물처·홍보처·휴식처는 지운 메뉴 (2026-11-18 대표 결정)
   { k: '콘텐츠', ic: '🎬', t: '콘텐츠', items: [['콘텐츠 붙이기'], ['콘텐츠 창고'], ['유튜브 주소 가져오기']] },
-  { k: '답사', ic: '🚶', t: '답사', items: [['답사 시작 (휴대폰)'], ['임시 추가 확정']] },
+  { k: '답사', ic: '🚶', t: '답사', items: [['답사 시작 (휴대폰)', function () { surveyCourses(); }], ['임시 추가 확정']] },
   { k: '운영', ic: '🛠️', t: '운영', items: [['긴급공지·길 통제', function () { notice(); }], ['선물처 운영·오늘 마감', function () { stores(); }], ['운영 조건·상황 단추']] },
   { k: '통계', ic: '📊', t: '통계', items: [['기본 통계'], ['특별 요청'], ['질문 관리']] }
 ];
@@ -390,7 +420,7 @@ function stores() {
 var CHUN = [37.8813, 127.7298];
 var MAP = null;
 function noEx(t) { return String(t || '').replace(/^\(예시\)\s*/, ''); }
-function dropMap() { if (MAP) { MAP.remove(); MAP = null; } }
+function dropMap() { if (MAP) { MAP.remove(); MAP = null; } if (typeof svStop === 'function') svStop(); } // 답사 화면을 떠나면 위치 따라가기·화면 켜 두기도 멈춤
 
 /* 화면 안 확인 상자 (브라우저 확인 창이 막힌 곳에서도 작동). btns: [[글자, 값, 'red'|'sub'(선택)]] */
 function ask(o, cb) {
@@ -750,6 +780,465 @@ function printQR(list, title) {
     document.body.appendChild(pa);
     setTimeout(function () { window.print(); }, 300);
   });
+}
+
+/* ================= 답사 (휴대폰, 2026-11-18 대표 요청) =================
+   코스를 골라 걸으며 다음 포인트까지 거리·방향, 코스 벗어남, 도착을 알려 주고, 포인트마다 위치 확인과
+   사진·음성·인터뷰·글(메모·대사·힌트)·"동영상 찍음" 표시를 남김. 자료는 휴대폰(IndexedDB)에 먼저 저장하고
+   신호가 잡히면 서버로 올림. 답사 중에는 화면을 켜 둠(Wake Lock). 동영상은 드라이브 앱으로 포인트 폴더에 직접 올림 */
+var SV = null, SV_UP = false, SVDB = null, SV_VIS = false;
+var SV_ARRIVE = 20, SV_OFF = 50, SV_LEAVE = 40;
+function apiQ(action, args) {
+  return new Promise(function (res, rej) {
+    google.script.run.withSuccessHandler(function (r) { if (r && r.error) rej(new Error(r.error)); else res(r); })
+      .withFailureHandler(function () { rej(new Error('NET')); }).adminApi(LINK, store(KEY), action, args || {});
+  });
+}
+function svNow() { var d = new Date(), z = function (n) { return (n < 10 ? '0' : '') + n; }; return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()) + ':' + z(d.getSeconds()); }
+function svDist(a1, o1, a2, o2) { var r = Math.PI / 180, dA = (a2 - a1) * r, dO = (o2 - o1) * r, x = Math.sin(dA / 2) * Math.sin(dA / 2) + Math.cos(a1 * r) * Math.cos(a2 * r) * Math.sin(dO / 2) * Math.sin(dO / 2); return 2 * 6371000 * Math.asin(Math.sqrt(x)); }
+function svBear(a1, o1, a2, o2) { var r = Math.PI / 180, y = Math.sin((o2 - o1) * r) * Math.cos(a2 * r), x = Math.cos(a1 * r) * Math.sin(a2 * r) - Math.sin(a1 * r) * Math.cos(a2 * r) * Math.cos((o2 - o1) * r); return (Math.atan2(y, x) / r + 360) % 360; }
+function svDir(b) { return ['북', '북동', '동', '남동', '남', '남서', '서', '북서'][Math.round(b / 45) % 8] + '쪽'; }
+function svFmt(m) { return m >= 1000 ? (m / 1000).toFixed(1) + 'km' : Math.round(m) + 'm'; }
+/* 지금 자리에서 코스 선까지 가장 가까운 거리(m) */
+function svOffLine(lat, lng, path) {
+  if (path.length < 2) return 0;
+  var kx = Math.cos(lat * Math.PI / 180) * 111320, ky = 110540, best = 1e9;
+  for (var i = 0; i < path.length - 1; i++) {
+    var ax = (path[i][1] - lng) * kx, ay = (path[i][0] - lat) * ky, bx = (path[i + 1][1] - lng) * kx, by = (path[i + 1][0] - lat) * ky;
+    var dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / L2)) : 0;
+    var px = ax + t * dx, py = ay + t * dy; best = Math.min(best, Math.sqrt(px * px + py * py));
+  }
+  return best;
+}
+
+/* ---- 휴대폰 저장소 (IndexedDB) ---- */
+function svDb() {
+  return new Promise(function (res, rej) {
+    if (SVDB) { res(SVDB); return; }
+    var q = indexedDB.open('walk-survey', 1);
+    q.onupgradeneeded = function () { q.result.createObjectStore('q', { keyPath: 'id' }); };
+    q.onsuccess = function () { SVDB = q.result; res(SVDB); };
+    q.onerror = function () { rej(q.error); };
+  });
+}
+function svPut(it) { return svDb().then(function (db) { return new Promise(function (res, rej) { var t = db.transaction('q', 'readwrite'); t.objectStore('q').put(it); t.oncomplete = function () { res(it); }; t.onerror = function () { rej(t.error); }; }); }); }
+function svDelIds(ids) { return svDb().then(function (db) { return new Promise(function (res) { var t = db.transaction('q', 'readwrite'), s = t.objectStore('q'); ids.forEach(function (id) { s.delete(id); }); t.oncomplete = function () { res(); }; t.onerror = function () { res(); }; }); }); }
+function svAll() { return svDb().then(function (db) { return new Promise(function (res, rej) { var r = db.transaction('q').objectStore('q').getAll(); r.onsuccess = function () { res(r.result.sort(function (a, b) { return a.t - b.t; })); }; r.onerror = function () { rej(r.error); }; }); }); }
+function blobB64(b) { return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(',')[1] || ''); }; fr.onerror = function () { rej(fr.error); }; fr.readAsDataURL(b); }); }
+function svQueue(o) {
+  var it = { id: 'S' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), t: Date.now(), at: svNow(), cno: SV ? SV.cno : '', no: '', kind: '', text: '', st: 'wait' };
+  if (SV && SV.pos) { it.lat = SV.pos.lat; it.lng = SV.pos.lng; it.acc = SV.pos.acc; }
+  for (var k in o) it[k] = o[k];
+  return svPut(it).then(function () { svRefresh(); svUpload(); return it; }, function () { alert('휴대폰에 저장하지 못했습니다. 저장 공간을 확인해 주십시오.'); });
+}
+/* 올리기: 차례로 보냄. 연결이 안 되면 멈추고 30초 뒤 다시. 서버가 거절한 것은 "못 올림"으로 두고 다음 것으로 */
+function svUpload(manual) {
+  if (SV_UP) return;
+  if (!manual && navigator.onLine === false) return;
+  SV_UP = true; svRefresh();
+  svAll().then(function (all) {
+    var list = all.filter(function (x) { return x.st === 'wait' || x.st === 'net' || (manual && x.st === 'bad'); });
+    var step = function (i) {
+      if (i >= list.length) { SV_UP = false; svRefresh(); return; }
+      var it = list[i], base = { id: it.id, cno: it.cno, no: it.no, kind: it.kind, text: it.text, at: it.at, lat: it.lat, lng: it.lng, acc: it.acc };
+      var send = it.blob ? blobB64(it.blob).then(function (b64) { base.mime = it.mime; base.b64 = b64; return apiQ('tUpload', base); })
+        : apiQ(it.kind === '위치' ? 'tLocate' : 'tNote', base);
+      send.then(function (r) {
+        it.st = 'done'; it.blob = null; it.url = (r && r.url) || ''; it.msg = it.kind === '위치' && r && r.moved !== null && r.moved !== undefined ? r.moved + 'm 옮김' : '';
+        return svPut(it);
+      }).then(function () { svRefresh(); step(i + 1); }, function (e) {
+        var m = String(e && e.message || e);
+        if (m === 'NET' || m === 'LOGIN') { it.st = 'net'; it.msg = m === 'LOGIN' ? '다시 로그인이 필요합니다' : '연결 안 됨'; svPut(it).then(function () { SV_UP = false; svRefresh(); }); return; }
+        it.st = 'bad'; it.msg = m; svPut(it).then(function () { svRefresh(); step(i + 1); });
+      });
+    };
+    step(0);
+  }, function () { SV_UP = false; });
+}
+/* 화면의 "올릴 것" 숫자·포인트 자료 목록 새로 그리기 */
+function svRefresh() {
+  var q = document.getElementById('svq'), pl = document.getElementById('svplist');
+  if (!q && !pl) return;
+  svAll().then(function (all) {
+    if (q) {
+      var w = all.filter(function (x) { return x.st !== 'done' && x.st !== 'bad'; }).length, b = all.filter(function (x) { return x.st === 'bad'; }).length, d = all.filter(function (x) { return x.st === 'done'; }).length;
+      var net = all.filter(function (x) { return x.st === 'net'; })[0];
+      q.textContent = (SV_UP ? '올리는 중… ' : '') + '휴대폰에 저장 ' + w + '개 · 올림 ' + d + '개' + (b ? ' · 못 올림 ' + b + '개' : '') + (net && !SV_UP ? ' (' + net.msg + ')' : '');
+    }
+    if (pl) {
+      pl.innerHTML = '';
+      var mine = all.filter(function (x) { return x.no === pl.getAttribute('data-no') && x.kind !== '위치'; });
+      if (!mine.length) pl.appendChild(el('p', 'small', '이 휴대폰에서 이 포인트에 남긴 자료가 아직 없습니다.'));
+      mine.slice().reverse().forEach(function (x) {
+        var stt = x.st === 'done' ? '올림 ✓' : x.st === 'bad' ? '못 올림: ' + x.msg : '휴대폰에 저장 (올릴 차례)';
+        pl.appendChild(row(x.kind + ' · ' + x.at.slice(5, 16), (x.text ? x.text.slice(0, 40) + ' · ' : '') + stt, null));
+      });
+    }
+  });
+}
+
+/* ---- 시작 / 멈춤 ---- */
+function svStop() {
+  if (!SV) return;
+  try { if (SV.watch !== null) navigator.geolocation.clearWatch(SV.watch); } catch (e) {}
+  try { if (SV.wake) SV.wake.release(); } catch (e) {}
+  if (SV.compassH) { window.removeEventListener('deviceorientationabsolute', SV.compassH); window.removeEventListener('deviceorientation', SV.compassH); }
+  if (SV.timer) clearInterval(SV.timer);
+  svCloseMedia();
+  SV = null;
+}
+function svWake() {
+  if (!SV) return;
+  if (!('wakeLock' in navigator)) { SV.wakeMsg = '이 휴대폰은 화면 켜 두기를 지원하지 않습니다. 휴대폰 설정에서 화면 꺼짐 시간을 길게 해 주십시오.'; return; }
+  navigator.wakeLock.request('screen').then(function (w) { if (SV) SV.wake = w; else w.release(); }, function () {});
+}
+function svCompass(ask) {
+  var go = function () {
+    if (SV.compassH) return;
+    SV.compassH = function (e) {
+      var hd = null;
+      if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) hd = e.webkitCompassHeading;
+      else if (e.absolute && e.alpha !== null) hd = 360 - e.alpha;
+      if (hd === null || !SV) return;
+      var so = (screen.orientation && screen.orientation.angle) || 0;
+      SV.head = (hd + so + 360) % 360; svArrow();
+    };
+    if ('ondeviceorientationabsolute' in window) window.addEventListener('deviceorientationabsolute', SV.compassH);
+    else window.addEventListener('deviceorientation', SV.compassH);
+  };
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    if (!ask) return false; // 아이폰: 단추를 눌러야 허락 창이 뜸
+    DeviceOrientationEvent.requestPermission().then(function (s) { if (s === 'granted') go(); }, function () {});
+    return true;
+  }
+  go(); return true;
+}
+function surveyCourses() {
+  svStop(); dropMap();
+  api('tCourses', {}, function (r) {
+    clear(); header('답사');
+    var c = card(el('h1', '', '🚶 답사 시작'), el('p', 'small', '코스를 고르면 걷기 안내가 시작됩니다. 휴대폰의 위치·나침반·카메라·마이크 사용을 허락해 주십시오. 답사 화면이 열려 있는 동안은 화면이 꺼지지 않습니다.'));
+    if (!r.list.length) c.appendChild(el('p', 'small', '아직 코스가 없습니다. 코스 설계에서 먼저 코스를 만들어 주십시오.'));
+    r.list.forEach(function (x) {
+      var b = el('button', 'sw on', '시작'); b.onclick = function () { survey(x.no); };
+      c.appendChild(row(x.no + ' ' + noEx(x.name), '포인트 ' + x.n + '개 · 남긴 자료 ' + x.items + '개 · ' + x.stage, b));
+    });
+    app.appendChild(c);
+    var qc = card(el('h2', '', '휴대폰에 저장된 자료'), el('p', 'small', '', null)); var qs = el('p', ''); qs.id = 'svq'; qc.appendChild(qs);
+    qc.appendChild(btn('지금 올리기', function () { svUpload(true); }, 'sub'));
+    qc.appendChild(btn('올린 자료 기록 지우기 (휴대폰에서만)', function () { svAll().then(function (all) { svDelIds(all.filter(function (x) { return x.st === 'done'; }).map(function (x) { return x.id; })).then(svRefresh); }); }, 'sub'));
+    app.appendChild(qc);
+    app.appendChild(backBtn());
+    svRefresh(); svUpload();
+  });
+}
+function survey(cno) {
+  api('tCourse', { no: cno }, function (r) {
+    svStop(); dropMap();
+    var key = 'sv_' + r.no, sv = {}; try { sv = JSON.parse(store(key) || '{}'); } catch (e) {}
+    SV = { r: r, cno: r.no, by: {}, seq: [], key: key, ti: sv.ti || 0, visited: sv.v || {}, pos: null, head: null, hist: [], watch: null, wake: null, timer: null, ui: {}, me: null, accC: null, fitMe: false, arrived: -1 };
+    r.points.forEach(function (p) { SV.by[p.no] = p; });
+    SV.seq = r.order.slice();
+    if (SV.ti >= SV.seq.length) SV.ti = 0;
+    svQueue({ kind: '답사 시작', text: r.no + '코스' });
+    svWake(); svCompass(false);
+    if (!navigator.geolocation) SV.geoErr = '이 브라우저는 위치를 읽을 수 없습니다.';
+    else SV.watch = navigator.geolocation.watchPosition(svOnPos, function (e) { if (!SV) return; SV.geoErr = e.code === 1 ? '위치 사용이 막혀 있습니다. 브라우저 주소창 왼쪽 자물쇠 → 위치 허용으로 바꿔 주십시오.' : '위치를 읽는 중입니다… (하늘이 보이는 곳에서 잘 잡힙니다)'; svUpdate(); }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 20000 });
+    SV.timer = setInterval(function () { svUpload(); }, 30000);
+    if (!SV_VIS) { SV_VIS = true; document.addEventListener('visibilitychange', function () { if (SV && document.visibilityState === 'visible') { svWake(); svUpload(); } }); }
+    svMain();
+  });
+}
+function svSave() { if (SV) store(SV.key, JSON.stringify({ ti: SV.ti, v: SV.visited })); }
+function svPath() { var out = []; SV.seq.forEach(function (n) { var p = SV.by[n]; if (p && p.lat !== null) out.push([p.lat, p.lng]); }); return out; }
+function svKillMap() { if (MAP) { MAP.remove(); MAP = null; } SV.me = null; SV.accC = null; SV.pins = {}; }
+
+/* ---- 걷기 안내 화면 ---- */
+function svMain() {
+  if (!SV) return;
+  var r = SV.r; svKillMap(); clear(); header(r.no + '코스 답사');
+  var g = el('div', 'svguide');
+  var u = SV.ui = {};
+  u.next = el('div', 'svnext'); u.dist = el('div', 'svdist', '…');
+  u.arrow = el('div', 'svarrow'); u.arrow.innerHTML = '<svg viewBox="0 0 24 24" width="56" height="56"><path d="M12 2 L20 21 L12 16 L4 21 Z" fill="#d9480f"/></svg>';
+  u.dir = el('div', 'small'); u.acc = el('div', 'small');
+  var top = el('div', 'svtop'); var lft = el('div', ''); lft.appendChild(u.next); lft.appendChild(u.dist); lft.appendChild(u.dir); top.appendChild(lft); top.appendChild(u.arrow);
+  g.appendChild(top); g.appendChild(u.acc);
+  u.warn = el('div', 'svwarn'); u.warn.style.display = 'none'; g.appendChild(u.warn);
+  u.arr = el('div', 'svok'); u.arr.style.display = 'none'; g.appendChild(u.arr);
+  var nav = el('div', 'svnav');
+  nav.appendChild(btn('◀ 앞 포인트', function () { svSetTarget(Math.max(0, SV.ti - 1)); }, 'sub'));
+  nav.appendChild(btn('이 포인트 자료', function () { svPoint(SV.ti); }));
+  nav.appendChild(btn('다음 포인트 ▶', function () { svSetTarget(Math.min(SV.seq.length - 1, SV.ti + 1)); }, 'sub'));
+  g.appendChild(nav);
+  app.appendChild(g);
+  if (!SV.compassH && typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')
+    app.appendChild(btn('🧭 나침반 켜기 (화살표 방향)', function () { svCompass(true); this.style.display = 'none'; }, 'sub'));
+  if (SV.wakeMsg) app.appendChild(el('p', 'err', SV.wakeMsg));
+  var md = el('div'); md.id = 'map';
+  app.appendChild(card(el('h2', '', '지도'), md, btn('내 위치로', function () { if (MAP && SV.pos) MAP.setView([SV.pos.lat, SV.pos.lng], 18); }, 'sub')));
+  var lc = card(el('h2', '', '포인트 (걷는 순서)'), el('p', 'small', '노란 줄 = 지금 가장 가까운 포인트, 주황 글자 = 안내 중인 포인트. 줄을 누르면 그 포인트로 안내를 바꿉니다.'));
+  u.rows = [];
+  SV.seq.forEach(function (n, i) {
+    var p = SV.by[n], d = el('span', 'svd', ''), op = el('button', 'sw on', '자료'); op.style.minWidth = '52px';
+    op.onclick = function (ev) { ev.stopPropagation(); svPoint(i); };
+    var cn = 0; Object.keys(p.cnt || {}).forEach(function (k) { if (k !== '답사 시작' && k !== '답사 끝') cn += p.cnt[k]; });
+    var rw = row((i + 1) + '. ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)'), (p.located ? '위치 확인 ✓' : '위치 확인 전') + (cn ? ' · 올린 자료 ' + cn + '개' : '') + (p.courses.length > 1 ? ' · 갈림길(' + p.courses.join('·') + ')' : ''), op);
+    rw.classList.add('svrow'); rw.querySelector('.l').appendChild(d);
+    rw.onclick = function () { svSetTarget(i); };
+    u.rows.push({ rw: rw, d: d }); lc.appendChild(rw);
+  });
+  app.appendChild(lc);
+  var qc = card(el('h2', '', '자료 올리기')); var qs = el('p', ''); qs.id = 'svq'; qc.appendChild(qs);
+  qc.appendChild(el('p', 'small', '찍은 자료는 휴대폰에 먼저 저장되고, 신호가 잡히면 저절로 올라갑니다. 동영상은 포인트 화면의 "이 포인트 폴더 열기"로 드라이브 앱에서 올려 주십시오.'));
+  qc.appendChild(btn('지금 올리기', function () { svUpload(true); }, 'sub'));
+  app.appendChild(qc);
+  app.appendChild(btn('답사 끝', function () { svEnd(); }, 'red'));
+  app.appendChild(btn('코스 고르기로 (답사 멈춤)', function () { surveyCourses(); }, 'sub'));
+  if (typeof L === 'undefined') md.textContent = '지도를 불러오지 못했습니다.';
+  else {
+    MAP = L.map(md);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(MAP);
+    COURSE_ORDER = r.lines.map(function (l) { return l.no; });
+    drawOtherLines(r.lines, r.no);
+    var path = svPath();
+    if (path.length > 1) L.polyline(path, { color: courseColor(r.no), weight: 6, opacity: 0.85 }).addTo(MAP);
+    SV.pins = {};
+    r.points.forEach(function (p) {
+      if (p.lat === null) return;
+      var mk = L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', html: '<div class="pin">' + p.no + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(MAP);
+      mk.on('click', function () { svSetTarget(SV.seq.indexOf(p.no)); });
+      SV.pins[p.no] = mk;
+    });
+    if (SV.pos) { MAP.setView([SV.pos.lat, SV.pos.lng], 17); SV.fitMe = true; }
+    else if (path.length) MAP.fitBounds(L.latLngBounds(path).pad(0.2)); else MAP.setView([37.8813, 127.7298], 14);
+  }
+  svUpdate(); svRefresh();
+}
+function svSetTarget(i) { if (!SV || i < 0 || i >= SV.seq.length) return; SV.ti = i; SV.arrived = -1; svSave(); svUpdate(); }
+function svOnPos(e) {
+  if (!SV) return;
+  SV.geoErr = '';
+  SV.pos = { lat: e.coords.latitude, lng: e.coords.longitude, acc: e.coords.accuracy || 0, t: Date.now() };
+  if (!SV.head && e.coords.heading !== null && !isNaN(e.coords.heading) && e.coords.speed > 0.5) SV.moveHead = e.coords.heading;
+  SV.hist.push(SV.pos); if (SV.hist.length > 40) SV.hist.shift();
+  if (MAP && typeof L !== 'undefined') {
+    var ll = [SV.pos.lat, SV.pos.lng];
+    if (!SV.me) { SV.accC = L.circle(ll, { radius: SV.pos.acc, color: '#2f6fed', weight: 1, fillOpacity: 0.12 }).addTo(MAP); SV.me = L.circleMarker(ll, { radius: 8, color: '#fff', weight: 3, fillColor: '#2f6fed', fillOpacity: 1 }).addTo(MAP); }
+    else { SV.me.setLatLng(ll); SV.accC.setLatLng(ll); SV.accC.setRadius(SV.pos.acc); }
+    if (!SV.fitMe) { SV.fitMe = true; MAP.setView(ll, 17); }
+  }
+  svUpdate();
+}
+function svArrow() {
+  if (!SV || !SV.ui.arrow || SV.bear === undefined) return;
+  var h = SV.head !== null ? SV.head : (SV.moveHead !== undefined ? SV.moveHead : null);
+  SV.ui.arrow.style.transform = 'rotate(' + Math.round(h === null ? SV.bear : SV.bear - h) + 'deg)';
+  if (SV.ui.dir) SV.ui.dir.textContent = svDir(SV.bear) + (h === null ? ' (화살표는 북쪽이 위 기준 — 나침반이 없으면 걸어가는 방향으로 맞춰집니다)' : ' · 화살표가 가리키는 쪽으로');
+}
+function svUpdate() {
+  if (!SV) return;
+  if (SV.ui.pdist && SV.pos) { var q2 = SV.by[SV.ui.pdist.getAttribute('data-no')]; SV.ui.pdist.textContent = q2 && q2.lat !== null ? '지금 이 포인트(지도 자리)까지 ' + svFmt(svDist(SV.pos.lat, SV.pos.lng, q2.lat, q2.lng)) + ' · 내 위치 정확도 ±' + Math.round(SV.pos.acc) + 'm' : '내 위치 정확도 ±' + Math.round(SV.pos.acc) + 'm'; }
+  if (!SV.ui.next) return;
+  var u = SV.ui, n = SV.seq[SV.ti], p = SV.by[n], pos = SV.pos;
+  var last = SV.ti === SV.seq.length - 1, ret = last && SV.seq.length > 1 && SV.seq[0] === n;
+  u.next.textContent = (SV.ti + 1) + '/' + SV.seq.length + ' ' + (ret ? '마침(시작으로 돌아옴) ' : last ? '마침 ' : '다음 ') + p.no + ' ' + (noEx(p.name) || '');
+  if (SV.pins) Object.keys(SV.pins).forEach(function (k) { var d = SV.pins[k].getElement && SV.pins[k].getElement(); if (d && d.firstChild) d.firstChild.className = 'pin' + (k === n ? ' tg' : ''); });
+  var warn = [];
+  if (SV.geoErr) warn.push(SV.geoErr);
+  if (!pos) { u.dist.textContent = '위치 읽는 중…'; u.acc.textContent = ''; }
+  else {
+    u.acc.textContent = '내 위치 정확도 ±' + Math.round(pos.acc) + 'm' + (pos.acc > 30 ? ' (오차가 큽니다. 잠시 기다려 주십시오)' : '');
+    if (p.lat === null) { u.dist.textContent = '위치 없음'; SV.bear = undefined; u.dir.textContent = '이 포인트는 지도 위치가 없습니다. 도착하면 "여기가 이 포인트"로 저장해 주십시오.'; }
+    else {
+      var d = svDist(pos.lat, pos.lng, p.lat, p.lng);
+      u.dist.textContent = svFmt(d); SV.bear = svBear(pos.lat, pos.lng, p.lat, p.lng); svArrow();
+      var near = Math.max(SV_ARRIVE, Math.min(pos.acc, 40));
+      if (d <= near && SV.arrived !== SV.ti) {
+        SV.arrived = SV.ti; SV.visited[SV.ti] = 1; svSave();
+        try { if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } catch (e) {}
+      }
+      // 도착한 뒤 40m 넘게 멀어지면 다음 포인트로 안내를 넘김
+      if (SV.arrived === SV.ti && d > SV_LEAVE + pos.acc && SV.ti < SV.seq.length - 1) { SV.arrived = -1; SV.ti++; svSave(); svUpdate(); return; }
+      if (SV.arrived === SV.ti) { u.arr.style.display = ''; u.arr.textContent = '✓ ' + p.no + ' 도착했습니다. "이 포인트 자료"를 눌러 위치 확인과 자료를 남겨 주십시오.'; }
+      else u.arr.style.display = 'none';
+      // 다음 포인트와 멀어지는 중 (최근 30초 사이 가장 가까웠던 거리보다 30m 넘게 멀어짐)
+      var min = d; SV.hist.forEach(function (h) { if (Date.now() - h.t < 30000) min = Math.min(min, svDist(h.lat, h.lng, p.lat, p.lng)); });
+      if (d - min > 30 + pos.acc / 2 && SV.arrived !== SV.ti) warn.push('다음 포인트(' + p.no + ')와 멀어지고 있습니다. 방향을 확인해 주십시오.');
+    }
+    var path = svPath(), off = svOffLine(pos.lat, pos.lng, path);
+    if (path.length > 1 && off > Math.max(SV_OFF, pos.acc)) warn.push('코스에서 약 ' + svFmt(off) + ' 벗어났습니다. 다른 길로 가고 있습니다.');
+    // 목록 거리와 가장 가까운 포인트
+    var best = -1, bd = 1e12;
+    SV.seq.forEach(function (k, i) {
+      var q = SV.by[k], rr = u.rows && u.rows[i]; if (!rr) return;
+      if (q.lat === null) { rr.d.textContent = ' · 위치 없음'; return; }
+      var dd = svDist(pos.lat, pos.lng, q.lat, q.lng); rr.d.textContent = ' · ' + svFmt(dd);
+      if (dd < bd) { bd = dd; best = i; }
+    });
+    if (u.rows) u.rows.forEach(function (rr, i) { rr.rw.classList.toggle('near', i === best); rr.rw.classList.toggle('tg', i === SV.ti); });
+  }
+  if (u.rows && !pos) u.rows.forEach(function (rr, i) { rr.rw.classList.toggle('tg', i === SV.ti); });
+  u.warn.style.display = warn.length ? '' : 'none'; u.warn.textContent = warn.join('\n');
+}
+
+/* ---- 포인트 화면: 위치 확인, 사진·녹음·글·동영상 표시, 폴더 열기 ---- */
+function svPoint(i) {
+  if (!SV) return;
+  var n = SV.seq[i], p = SV.by[n];
+  svKillMap(); clear(); header(p.no + ' 답사');
+  SV.ui = {}; SV.ti = i; svSave();
+  var info = card(el('h1', '', p.no + ' ' + (noEx(p.name) || '(이름 없음)')),
+    el('p', 'small', (i + 1) + '번째 · 단계 ' + p.stage + (p.kinds.length ? ' · 용도 ' + p.kinds.join('·') : '') + (p.courses.length > 1 ? ' · 갈림길(' + p.courses.join('·') + '코스)' : '')));
+  var pd = el('p', 'small', SV.pos ? '' : '위치 읽는 중…'); pd.setAttribute('data-no', p.no); SV.ui.pdist = pd; info.appendChild(pd);
+  info.appendChild(el('p', p.located ? 'small' : 'err', p.located ? '위치 확인함: ' + p.located : '아직 현장 위치를 확인하지 않았습니다.'));
+  if (p.purpose) { info.appendChild(el('label', '', '의도 (설계 메모)')); info.appendChild(el('p', '', p.purpose)); }
+  if (p.desc) { info.appendChild(el('label', '', '설명')); info.appendChild(el('p', '', p.desc)); }
+  app.appendChild(info);
+  app.appendChild(btn('📍 여기가 이 포인트 (지금 위치 저장)', function () {
+    if (!SV.pos) { alert('아직 위치를 읽지 못했습니다. 잠시 뒤 다시 눌러 주십시오.'); return; }
+    var pos = SV.pos, d = p.lat !== null ? Math.round(svDist(pos.lat, pos.lng, p.lat, p.lng)) : null;
+    ask({ text: p.no + ' 포인트 위치를 지금 자리로 저장할까요?\n' + (d === null ? '' : '지도에 찍어 둔 자리에서 약 ' + d + 'm 떨어진 곳입니다.\n') + '지금 위치 정확도 ±' + Math.round(pos.acc) + 'm' + (pos.acc > 30 ? '\n(오차가 큽니다. 잠시 기다렸다가 저장하면 더 정확합니다)' : '') + (p.courses.length > 1 ? '\n갈림길이라 ' + p.courses.join('·') + '코스 모두에 적용됩니다.' : ''), btns: [['저장', 'ok'], ['취소', null]] }, function () {
+      svQueue({ kind: '위치', no: p.no, lat: pos.lat, lng: pos.lng, acc: pos.acc, text: '' });
+      p.lat = pos.lat; p.lng = pos.lng; p.located = svNow() + ' ±' + Math.round(pos.acc) + 'm (휴대폰에 저장, 올리는 중)';
+      svPoint(i);
+    });
+  }));
+  var g = el('div', 'svgrid');
+  g.appendChild(btn('📷 사진', function () { svCamera(p.no); }));
+  g.appendChild(btn('🎙️ 음성 녹음', function () { svRecord(p.no, '음성'); }));
+  g.appendChild(btn('🎤 인터뷰 녹음', function () { svRecord(p.no, '인터뷰'); }));
+  g.appendChild(btn('🎬 동영상 찍음 표시', function () {
+    ask({ text: '이 포인트에서 동영상을 찍었다고 표시합니다. 무엇을 찍었는지 적어 두면 사무실에서 찾기 쉽습니다(비워도 됨).', input: '', btns: [['표시', 'ok'], ['취소', null]] }, function (v, t) {
+      svQueue({ kind: '동영상 찍음', no: p.no, text: t || '' });
+    });
+  }, 'sub'));
+  app.appendChild(g);
+  // 글 남기기
+  var kinds = ['메모', '대사', '힌트'], sel = '메모', chips = el('div', 'chips'), tx = el('textarea');
+  tx.placeholder = '떠오른 생각, 이 자리에서 할 대사, 방문자에게 줄 힌트 등';
+  kinds.forEach(function (k) { var c = el('button', 'chip' + (k === sel ? ' sel' : ''), k); c.onclick = function () { sel = k; [].forEach.call(chips.children, function (x) { x.className = 'chip' + (x.textContent === sel ? ' sel' : ''); }); }; chips.appendChild(c); });
+  app.appendChild(card(el('h2', '', '✏️ 글 남기기'), chips, tx, btn('저장', function () {
+    var t = tx.value.trim(); if (!t) { tx.focus(); return; }
+    svQueue({ kind: sel, no: p.no, text: t }); tx.value = '';
+  })));
+  // 폴더 열기 (동영상 올리기)
+  var fc = card(el('h2', '', '📁 이 포인트 폴더 (동영상 올리기)'), el('p', 'small', '드라이브 앱에서 이 포인트 폴더가 열립니다. 찍은 동영상을 여기에 올려 주십시오(와이파이에서 올리기를 권합니다).'));
+  fc.appendChild(btn('이 포인트 폴더 열기', function () {
+    if (p.folder) { window.open(p.folder, '_blank'); return; }
+    var w = window.open('', '_blank');
+    api('tFolder', { no: p.no }, function (r) { p.folder = r.url; if (w) w.location.href = r.url; else window.open(r.url, '_blank'); });
+  }, 'sub'));
+  app.appendChild(fc);
+  // 이 포인트 자료
+  var lc = card(el('h2', '', '이 포인트에 남긴 자료')); var pl = el('div'); pl.id = 'svplist'; pl.setAttribute('data-no', p.no); lc.appendChild(pl);
+  var qs = el('p', 'small'); qs.id = 'svq'; lc.appendChild(qs);
+  lc.appendChild(btn('서버에 올라간 자료 모두 보기', function () { svItems(p, i); }, 'sub'));
+  app.appendChild(lc);
+  app.appendChild(btn('← 걷기 안내로', function () { svMain(); }));
+  svRefresh(); svUpdate();
+}
+function svItems(p, i) {
+  api('tItems', { no: p.no }, function (r) {
+    svKillMap(); clear(); header(p.no + ' 답사 자료'); SV.ui = {};
+    var c = card(el('h1', '', p.no + ' ' + (noEx(p.name) || '')), el('p', 'small', '서버(답사 시트·드라이브)에 올라간 자료 ' + r.list.length + '개 — 새것이 위'));
+    r.list.forEach(function (x) {
+      var a = null; if (x.url) { a = el('a', 'sw on', '열기'); a.href = x.url; a.target = '_blank'; a.style.textDecoration = 'none'; }
+      c.appendChild(row(x.kind + ' · ' + String(x.at).slice(5, 16), (x.cno ? x.cno + '코스 · ' : '') + (x.text ? String(x.text).slice(0, 60) + ' · ' : '') + x.who, a));
+    });
+    app.appendChild(c);
+    app.appendChild(btn('← 포인트 화면으로', function () { svPoint(i); }));
+  });
+}
+
+/* ---- 화면 안 카메라 ---- */
+function svCloseMedia() {
+  if (SV && SV.stream) { SV.stream.getTracks().forEach(function (t) { t.stop(); }); SV.stream = null; }
+  if (SV && SV.rec && SV.rec.state !== 'inactive') { try { SV.rec.stop(); } catch (e) {} }
+  var o = document.getElementById('svcam'); if (o) o.parentNode.removeChild(o);
+}
+function svCamera(no) {
+  var o = el('div', 'svcam'); o.id = 'svcam';
+  var v = document.createElement('video'); v.setAttribute('playsinline', ''); v.muted = true; v.autoplay = true;
+  var info = el('div', 'svcinfo', no + ' 사진 · 찍은 사진 0장'), shots = 0, face = 'environment';
+  var bar = el('div', 'bar');
+  var close = el('button', 'b sub', '닫기'); close.onclick = function () { svCloseMedia(); svRefresh(); };
+  var shot = el('button', 'svshot', ''); shot.setAttribute('aria-label', '찍기');
+  var flip = el('button', 'b sub', '앞·뒤');
+  bar.appendChild(close); bar.appendChild(shot); bar.appendChild(flip);
+  o.appendChild(info); o.appendChild(v); o.appendChild(bar); document.body.appendChild(o);
+  var start = function () {
+    if (SV.stream) SV.stream.getTracks().forEach(function (t) { t.stop(); });
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: face, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false }).then(function (s) { SV.stream = s; v.srcObject = s; }, function () {
+      svCloseMedia();
+      // 화면 안 카메라가 안 되면 휴대폰 카메라로 찍기
+      var f = el('input'); f.type = 'file'; f.accept = 'image/*'; f.setAttribute('capture', 'environment');
+      f.onchange = function () { if (f.files[0]) svQueue({ kind: '사진', no: no, blob: f.files[0], mime: f.files[0].type || 'image/jpeg' }); };
+      f.click();
+    });
+  };
+  flip.onclick = function () { face = face === 'environment' ? 'user' : 'environment'; start(); };
+  shot.onclick = function () {
+    if (!v.videoWidth) return;
+    var w = v.videoWidth, h = v.videoHeight, k = Math.min(1, 1920 / Math.max(w, h)), cv = document.createElement('canvas');
+    cv.width = Math.round(w * k); cv.height = Math.round(h * k); cv.getContext('2d').drawImage(v, 0, 0, cv.width, cv.height);
+    o.classList.add('flash'); setTimeout(function () { o.classList.remove('flash'); }, 150);
+    cv.toBlob(function (b) { if (!b) return; svQueue({ kind: '사진', no: no, blob: b, mime: 'image/jpeg' }); shots++; info.textContent = no + ' 사진 · 찍은 사진 ' + shots + '장 (휴대폰에 저장됨)'; }, 'image/jpeg', 0.85);
+  };
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { svCloseMedia(); alert('이 브라우저는 화면 안 카메라를 쓸 수 없습니다.'); return; }
+  start();
+}
+/* ---- 화면 안 녹음 (음성·인터뷰) ---- */
+function svRecord(no, kind) {
+  if (!navigator.mediaDevices || !window.MediaRecorder) { alert('이 브라우저는 녹음을 할 수 없습니다.'); return; }
+  var o = el('div', 'svcam svrec'); o.id = 'svcam';
+  var t = el('div', 'svrtime', '00:00'), info = el('div', 'svcinfo', no + ' ' + kind + ' 녹음'), memo = input('text', kind === '인터뷰' ? '누구와 인터뷰했는지 (선택)' : '무엇을 녹음했는지 (선택)');
+  var go = el('button', 'b', '● 녹음 시작'), close = el('button', 'b sub', '닫기');
+  var box = el('div', 'svrbox'); box.appendChild(info); box.appendChild(t); box.appendChild(memo); box.appendChild(go); box.appendChild(close);
+  o.appendChild(box); document.body.appendChild(o);
+  var chunks = [], t0 = 0, tick = null;
+  close.onclick = function () { if (SV.rec && SV.rec.state === 'recording') { ask({ text: '녹음 중입니다. 멈추고 저장할까요?', btns: [['멈추고 저장', 'ok'], ['계속 녹음', null]] }, function () { SV.rec.stop(); }); return; } svCloseMedia(); svRefresh(); };
+  go.onclick = function () {
+    if (SV.rec && SV.rec.state === 'recording') { SV.rec.stop(); return; }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (s) {
+      SV.stream = s; chunks = [];
+      var mt = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'].filter(function (x) { return MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(x); })[0];
+      SV.rec = mt ? new MediaRecorder(s, { mimeType: mt }) : new MediaRecorder(s);
+      SV.rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+      SV.rec.onstop = function () {
+        clearInterval(tick);
+        var b = new Blob(chunks, { type: (SV.rec.mimeType || 'audio/webm') });
+        if (SV.stream) { SV.stream.getTracks().forEach(function (x) { x.stop(); }); SV.stream = null; }
+        if (b.size) svQueue({ kind: kind, no: no, blob: b, mime: b.type, text: memo.value.trim() });
+        info.textContent = no + ' ' + kind + ' 저장했습니다 (' + t.textContent + '). 더 녹음하려면 다시 누르십시오.';
+        go.textContent = '● 녹음 시작'; o.classList.remove('on'); memo.value = '';
+      };
+      SV.rec.start(1000); t0 = Date.now(); o.classList.add('on'); go.textContent = '■ 멈추고 저장';
+      tick = setInterval(function () { var s2 = Math.floor((Date.now() - t0) / 1000); t.textContent = (s2 < 600 ? '0' : '') + Math.floor(s2 / 60) + ':' + (s2 % 60 < 10 ? '0' : '') + s2 % 60; }, 500);
+    }, function () { alert('마이크를 쓸 수 없습니다. 브라우저에서 마이크 사용을 허락해 주십시오.'); });
+  };
+}
+
+/* ---- 답사 끝 ---- */
+function svEnd() {
+  if (!SV) return;
+  var r = SV.r, loc = r.points.filter(function (p) { return p.located; }).length;
+  svKillMap(); clear(); header(r.no + '코스 답사 끝'); SV.ui = {};
+  var c = card(el('h1', '', '답사를 마칠까요?'), el('p', '', '위치를 확인한 포인트 ' + loc + ' / ' + r.points.length + '개'));
+  var qs = el('p', ''); qs.id = 'svq'; c.appendChild(qs);
+  c.appendChild(el('p', 'small', '아직 못 올린 자료는 휴대폰에 남아 있다가, 다음에 답사 화면을 열면 올라갑니다. 동영상은 사무실에서 각 포인트 폴더에 올려 주십시오.'));
+  app.appendChild(c);
+  app.appendChild(btn('지금 올리기', function () { svUpload(true); }, 'sub'));
+  app.appendChild(btn('위치를 확인한 "임시" 포인트를 "답사 끝" 단계로 바꾸기', function () {
+    api('tStageDone', { cno: r.no }, function (x) { alert(x.n + '개 포인트를 "답사 끝" 단계로 바꿨습니다.'); });
+  }, 'sub'));
+  app.appendChild(btn('답사 끝내기', function () {
+    svQueue({ kind: '답사 끝', text: r.no + '코스 · 위치 확인 ' + loc + '/' + r.points.length }).then(function () {
+      store(SV.key, ''); svStop(); surveyCourses();
+    });
+  }, 'red'));
+  app.appendChild(btn('← 걷기 안내로 돌아가기', function () { svMain(); }));
+  svRefresh();
 }
 
 /* 포인트 관리 (포인트 메뉴, 2026-11-18 대표 요청): 코스를 고르면 코스 지도에 포인트 상황을 보여 주고 거기서 관리. 자리·순서는 코스 만들기에서만 바꿈 */
