@@ -77,6 +77,29 @@ label { font-size: 15px; color: #3e4c59; }
 .gbtn { position: relative; text-align: left; border: 0; border-radius: 10px; background: #e4ece7; color: #1f4e3d; font-size: 17px; font-weight: 700; padding: 12px 14px; cursor: pointer; }
 .gbtn::before { content: ''; position: absolute; left: -15px; top: 50%; width: 12px; border-top: 3px solid #1f4e3d; }
 .gbtn.off { color: #9aa5b1; background: #f2f4f1; cursor: default; }
+.gcard { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; border-radius: 18px; padding: 16px; margin: 0 0 12px; background: #fff; box-shadow: 0 2px 8px rgba(31,78,61,.10); cursor: pointer; text-align: left; font-family: inherit; transition: transform .08s; }
+.gcard:active { transform: scale(.98); }
+.gcard .gic, .ghead .gic { flex: none; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 30px; }
+.gcard .gt { flex: 1; min-width: 0; }
+.gcard .gt b { display: block; font-size: 21px; color: #1f2933; }
+.gcard .gt span { display: block; font-size: 13px; color: #52606d; margin-top: 2px; }
+.gcard .chev { font-size: 30px; color: #9aa5b1; line-height: 1; }
+.gcard.off, .stile.off { opacity: .4; cursor: default; }
+.c-course .gic, .c-course .sic { background: #dff0e6; }
+.c-stat .gic, .c-stat .sic { background: #e2ebfb; }
+.c-ops .gic, .c-ops .sic { background: #fcecd5; }
+.c-course.gcard { border-left: 6px solid #1f7a4d; }
+.c-stat.gcard { border-left: 6px solid #3b6fd1; }
+.c-ops.gcard { border-left: 6px solid #d98a1c; }
+.ghead { display: flex; align-items: center; gap: 12px; margin: 0 2px 12px; }
+.ghead b { font-size: 22px; color: #1f2933; }
+.subgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stile { border: 0; border-radius: 18px; background: #fff; box-shadow: 0 2px 8px rgba(31,78,61,.10); padding: 18px 10px 16px; text-align: center; cursor: pointer; font-family: inherit; transition: transform .08s; }
+.stile:active { transform: scale(.97); }
+.stile .sic { width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+.stile b { display: block; font-size: 17px; color: #1f2933; }
+.stile span { display: block; font-size: 12px; color: #52606d; margin-top: 4px; line-height: 1.35; }
+.circ { box-shadow: 0 2px 6px rgba(31,78,61,.12); background: #fff; }
 .botrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 @media (max-width: 380px) { .circ { width: 66px; height: 66px; } .circ b { font-size: 20px; } }
 .ckl { margin-top: 4px; line-height: 1.9; }
@@ -185,7 +208,36 @@ var TILES = [
   { k: '통계', ic: '📊', t: '통계', items: [['기본 통계'], ['특별 요청'], ['질문 관리']] }
 ];
 
-function tileMenu(t) {
+/* 첫 화면 묶음 (2026-11-18 대표 그림 → 단추로 아래 단계에 들어감) */
+var GROUPS = [
+  { t: '코스', ic: '🗺️', cls: 'c-course', items: [
+    { k: '코스', t: '코스 설계', ic: '🗺️', d: '지도에서 코스·포인트 만들기' },
+    { k: '포인트', t: '포인트', ic: '📍', d: 'QR 켜기·끄기, 미리보기' },
+    { k: '답사', t: '답사', ic: '🚶', d: '현장에서 위치·사진 모으기' },
+    { k: '콘텐츠', t: '콘텐츠', ic: '🎬', d: '쇼츠·사진 붙이기' }] },
+  { t: '통계', ic: '📊', cls: 'c-stat', items: [
+    { k: '통계', t: '통계', ic: '📊', d: '기본 통계·특별 요청·질문 관리' }] },
+  { t: '운영', ic: '🛠️', cls: 'c-ops', items: [
+    { k: '운영', t: '운영', ic: '🛠️', d: '긴급공지·길 통제·선물처' },
+    { k: '관리자', t: '직원 관리', ic: '👥', d: '직원 등록·맡긴 일', fn: function () { admins(); } }] }
+];
+function openItem(x, g) { if (x.fn) x.fn(); else tileMenu(TILES.filter(function (tt) { return tt.k === x.k; })[0], g); }
+function openGroup(g) {
+  if (g.items.length === 1) { openItem(g.items[0], null); return; }
+  clear(); header(g.t);
+  app.appendChild(el('div', 'ghead ' + g.cls, null, el('div', 'gic', g.ic), el('b', '', g.t)));
+  var grid = el('div', 'subgrid ' + g.cls);
+  g.items.forEach(function (x) {
+    var ok = ME && ME.perms.indexOf(x.k) >= 0;
+    var b = el('button', 'stile' + (ok ? '' : ' off'), null, el('div', 'sic', x.ic), el('b', '', x.t), el('span', '', x.d));
+    if (ok) b.onclick = function () { openItem(x, g); }; else b.disabled = true;
+    grid.appendChild(b);
+  });
+  app.appendChild(grid);
+  app.appendChild(backBtn());
+}
+
+function tileMenu(t, from) {
   clear(); header(t.t);
   var c = card(el('h1', '', t.ic + ' ' + t.t));
   if (t.top) t.top(c);
@@ -195,6 +247,7 @@ function tileMenu(t) {
     c.appendChild(b);
   });
   app.appendChild(c);
+  if (from) app.appendChild(btn('← ' + from.t + '(으)로', function () { openGroup(from); }, 'sub'));
   app.appendChild(backBtn());
 }
 
@@ -209,14 +262,15 @@ function home() {
     var n = el('div', 'circles');
     [['신청', r.count.join], ['걷기 시작', r.count.start], ['마침', r.count.done], ['선물 사용', r.count.gift]].forEach(function (x) { n.appendChild(el('div', 'circ', null, el('b', '', String(x[1])), el('span', '', x[0]))); });
     app.appendChild(card(el('h2', '', '오늘'), n));
-    var tile = function (k) { return TILES.filter(function (x) { return x.k === k; })[0]; };
-    var item = function (label, ok, fn) { var b = el('button', 'gbtn' + (ok ? '' : ' off'), label); if (ok) b.onclick = fn; else b.disabled = true; return b; };
-    var tItem = function (k, label) { var tt = tile(k); return item(label || tt.t, r.perms.indexOf(k) >= 0, function () { tileMenu(tt); }); };
-    var group = function (label, items) { var gi = el('div', 'gi'); items.forEach(function (x) { gi.appendChild(x); }); return el('div', 'grp', null, el('div', 'gl', label), gi); };
-    app.appendChild(card(
-      group('코스', [tItem('코스', '코스 설계'), tItem('포인트'), tItem('답사'), tItem('콘텐츠')]),
-      group('통계', [tItem('통계')]),
-      group('운영', [tItem('운영'), item('직원 관리', r.perms.indexOf('관리자') >= 0, function () { admins(); })])));
+    GROUPS.forEach(function (g) {
+      var ok = g.items.some(function (x) { return r.perms.indexOf(x.k) >= 0; });
+      var b = el('button', 'gcard ' + g.cls + (ok ? '' : ' off'), null,
+        el('div', 'gic', g.ic),
+        el('div', 'gt', null, el('b', '', g.t), el('span', '', g.items.map(function (x) { return x.t; }).join(' · '))),
+        el('div', 'chev', '›'));
+      if (ok) b.onclick = function () { openGroup(g); }; else b.disabled = true;
+      app.appendChild(b);
+    });
     var bottom = el('div', 'botrow');
     bottom.appendChild(btn('로그아웃', function () { api('logout', {}, function () { store(KEY, ''); login(''); }); }, 'sub'));
     bottom.appendChild(btn('비밀번호 바꾸기', function () { changePw(false); }, 'sub'));
