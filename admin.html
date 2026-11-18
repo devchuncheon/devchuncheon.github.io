@@ -83,6 +83,9 @@ label { font-size: 15px; color: #3e4c59; }
 .gcard .gt { flex: 1; min-width: 0; }
 .gcard .gt b { display: block; font-size: 21px; color: #1f2933; }
 .gcard .gt span { display: block; font-size: 13px; color: #52606d; margin-top: 2px; }
+.gbadge { display: flex; gap: 6px; margin-top: 6px; }
+.gbadge em { font-style: normal; font-size: 13px; font-weight: 700; color: #1f7a4d; background: #dff0e6; border-radius: 10px; padding: 2px 9px; }
+.gbadge em.w { color: #8a5a00; background: #fcecd5; }
 .gcard .chev { font-size: 30px; color: #9aa5b1; line-height: 1; }
 .gcard.off, .stile.off { opacity: .4; cursor: default; }
 .c-course .gic, .c-course .sic { background: #dff0e6; }
@@ -266,7 +269,8 @@ function home() {
       var ok = g.items.some(function (x) { return r.perms.indexOf(x.k) >= 0; });
       var b = el('button', 'gcard ' + g.cls + (ok ? '' : ' off'), null,
         el('div', 'gic', g.ic),
-        el('div', 'gt', null, el('b', '', g.t), el('span', '', g.items.map(function (x) { return x.t; }).join(' · '))),
+        el('div', 'gt', null, el('b', '', g.t), el('span', '', g.items.map(function (x) { return x.t; }).join(' · ')),
+          g.t === '코스' && r.courses ? el('div', 'gbadge', null, el('em', '', '코스 ' + r.courses.all + '개'), el('em', 'w', '설계 중 ' + r.courses.work + '개')) : null),
         el('div', 'chev', '›'));
       if (ok) b.onclick = function () { openGroup(g); }; else b.disabled = true;
       app.appendChild(b);
