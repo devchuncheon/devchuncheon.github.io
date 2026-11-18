@@ -66,6 +66,19 @@ label { font-size: 15px; color: #3e4c59; }
 .pin.x { background: #534ab7; border-radius: 7px; }
 .askbg { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(0,0,0,.45); z-index: 3000; display: flex; align-items: center; justify-content: center; padding: 16px; }
 .pl { white-space: pre-line; }
+.circles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; justify-items: center; }
+.circ { width: 76px; height: 76px; border-radius: 50%; background: #eef5f0; border: 2px solid #1f4e3d; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.circ b { font-size: 24px; color: #1f4e3d; line-height: 1.1; }
+.circ span { font-size: 12px; color: #52606d; }
+.grp { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid #eef0f2; }
+.grp:first-child { border-top: 0; }
+.gl { flex: none; width: 62px; font-size: 19px; font-weight: 800; color: #1f4e3d; }
+.gi { flex: 1; border-left: 3px solid #1f4e3d; padding-left: 12px; display: flex; flex-direction: column; gap: 6px; }
+.gbtn { position: relative; text-align: left; border: 0; border-radius: 10px; background: #e4ece7; color: #1f4e3d; font-size: 17px; font-weight: 700; padding: 12px 14px; cursor: pointer; }
+.gbtn::before { content: ''; position: absolute; left: -15px; top: 50%; width: 12px; border-top: 3px solid #1f4e3d; }
+.gbtn.off { color: #9aa5b1; background: #f2f4f1; cursor: default; }
+.botrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 380px) { .circ { width: 66px; height: 66px; } .circ b { font-size: 20px; } }
 .ckl { margin-top: 4px; line-height: 1.9; }
 .ck { display: inline-block; font-size: 13px; border-radius: 6px; padding: 0 6px; margin: 0 4px 0 0; white-space: nowrap; }
 .ck.ok { background: #e3f1e8; color: #1f7a4d; }
@@ -91,7 +104,7 @@ function input(type, ph, val) { var i = el('input'); i.type = type; i.placeholde
 function clear() { app.innerHTML = ''; window.scrollTo(0, 0); }
 function busy(on) { document.getElementById('busy').style.display = on ? 'block' : 'none'; var bs = document.querySelectorAll('button'); for (var i = 0; i < bs.length; i++) bs[i].disabled = !!on; }
 function header(title) {
-  var t = el('div', 'top', null, el('div', 't', title || '걸어서 춘천 관리'));
+  var t = el('div', 'top', null, el('div', 't', title || '관리자 화면'));
   if (ME) t.appendChild(el('div', 'w', ME.name + ' (' + (ME.role === '대표' ? '대표' : '직원') + ')'));
   app.appendChild(t);
 }
@@ -192,20 +205,22 @@ function home() {
     if (r.test) app.appendChild(el('div', 'warn', '시험모드가 켜져 있습니다. 실제 공개 전에 설정 시트의 "시험모드"를 비워 주십시오.'));
     if (r.autoWipe) app.appendChild(el('div', 'warn', '자동기록지우기가 켜져 있습니다(시험 기간용). 실제 공개 전에 비워 주십시오.'));
     if (r.alert) app.appendChild(el('div', 'alertbox', '지금 올라가 있는 긴급 공지\n' + r.alert));
-    var n = el('div', 'nums');
-    [['신청', r.count.join], ['걷기 시작', r.count.start], ['마침', r.count.done], ['선물 사용', r.count.gift]].forEach(function (x) { n.appendChild(el('div', 'num', null, el('b', '', String(x[1])), el('span', '', x[0]))); });
+    /* 첫 화면 (2026-11-18 대표 그림): 제목 · 오늘 동그라미 4개 · 묶음(코스 / 통계 / 운영) · 로그아웃 */
+    var n = el('div', 'circles');
+    [['신청', r.count.join], ['걷기 시작', r.count.start], ['마침', r.count.done], ['선물 사용', r.count.gift]].forEach(function (x) { n.appendChild(el('div', 'circ', null, el('b', '', String(x[1])), el('span', '', x[0]))); });
     app.appendChild(card(el('h2', '', '오늘'), n));
-    var g = el('div', 'grid');
-    TILES.forEach(function (t) {
-      var ok = r.perms.indexOf(t.k) >= 0;
-      var b = el('button', 'tile' + (ok ? '' : ' off'), null, el('span', 'ic', t.ic), document.createTextNode(t.t));
-      if (ok) b.onclick = function () { tileMenu(t); };
-      g.appendChild(b);
-    });
-    app.appendChild(g);
-    if (r.perms.indexOf('관리자') >= 0) app.appendChild(btn('👥 직원 관리', function () { admins(); }, 'sub'));
-    app.appendChild(btn('비밀번호 바꾸기', function () { changePw(false); }, 'sub'));
-    app.appendChild(btn('로그아웃', function () { api('logout', {}, function () { store(KEY, ''); login(''); }); }, 'sub'));
+    var tile = function (k) { return TILES.filter(function (x) { return x.k === k; })[0]; };
+    var item = function (label, ok, fn) { var b = el('button', 'gbtn' + (ok ? '' : ' off'), label); if (ok) b.onclick = fn; else b.disabled = true; return b; };
+    var tItem = function (k, label) { var tt = tile(k); return item(label || tt.t, r.perms.indexOf(k) >= 0, function () { tileMenu(tt); }); };
+    var group = function (label, items) { var gi = el('div', 'gi'); items.forEach(function (x) { gi.appendChild(x); }); return el('div', 'grp', null, el('div', 'gl', label), gi); };
+    app.appendChild(card(
+      group('코스', [tItem('코스', '코스 설계'), tItem('포인트'), tItem('답사'), tItem('콘텐츠')]),
+      group('통계', [tItem('통계')]),
+      group('운영', [tItem('운영'), item('직원 관리', r.perms.indexOf('관리자') >= 0, function () { admins(); })])));
+    var bottom = el('div', 'botrow');
+    bottom.appendChild(btn('로그아웃', function () { api('logout', {}, function () { store(KEY, ''); login(''); }); }, 'sub'));
+    bottom.appendChild(btn('비밀번호 바꾸기', function () { changePw(false); }, 'sub'));
+    app.appendChild(bottom);
   });
 }
 
