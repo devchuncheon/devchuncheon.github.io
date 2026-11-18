@@ -408,7 +408,22 @@ function ask(o, cb) {
 
 /* 빠진 것 표시: ✓ 붙어 있음 / ✗ 아직 없음 / — 일부러 뺌 */
 var CKMARK = { ok: '✓', no: '✗', skip: '—' };
-function ckEl(chk) { var d = el('div', 'ckl'); (chk || []).forEach(function (c) { d.appendChild(el('span', 'ck ' + c.s, c.k + ' ' + CKMARK[c.s])); }); return d; }
+/* 사진·쇼츠·안내문은 1·2·3을 한 칸으로 묶어 보임: "사진 1✓ 2✗ 3—" (2026-11-18) */
+function ckGroups(chk) {
+  var out = [], at = {};
+  (chk || []).forEach(function (c) {
+    if (!c.g) { out.push({ s: c.s, t: c.k + ' ' + CKMARK[c.s] }); return; }
+    var n = c.k.slice(c.g.length + 1);
+    if (!at[c.g]) { at[c.g] = { g: c.g, list: [] }; out.push(at[c.g]); }
+    at[c.g].list.push({ n: n, s: c.s });
+  });
+  return out.map(function (x) {
+    if (!x.g) return x;
+    var ss = x.list.map(function (y) { return y.s; });
+    return { s: ss.indexOf('no') >= 0 ? 'no' : ss.indexOf('ok') >= 0 ? 'ok' : 'skip', t: x.g + ' ' + x.list.map(function (y) { return y.n + CKMARK[y.s]; }).join(' ') };
+  });
+}
+function ckEl(chk) { var d = el('div', 'ckl'); ckGroups(chk).forEach(function (c) { d.appendChild(el('span', 'ck ' + c.s, c.t)); }); return d; }
 function ckMiss(chk) { return (chk || []).filter(function (c) { return c.s === 'no'; }).length; }
 
 /* 포인트 정보 (2단계): 표시 이름·성격·의도·설명·찾는 법, 포인트 단계, 빠진 것 */
@@ -430,7 +445,7 @@ function pointForm(cno, no, msg) {
       btn('저장', function () {
         api('dSavePoint', { no: r.no, name: nm.value, kinds: kc.value(), purpose: pu.value, desc: de.value, find: fd.value }, function () { pointForm(cno, r.no, '저장했습니다.'); }, err);
       }), err, ok));
-    var cc = card(el('h2', '', '빠진 것'), el('p', 'small', '✗ 표시가 할 일입니다. 이 포인트에 필요 없는 항목은 "안 씀"을 누르면 —로 바뀌고 빠진 것으로 세지 않습니다. 사진·쇼츠는 4번 "콘텐츠 붙이기"에서 채웁니다.'));
+    var cc = card(el('h2', '', '빠진 것'), el('p', 'small', '✗ 표시가 할 일입니다. 이 포인트에 필요 없는 항목은 "안 씀"을 누르면 —로 바뀌고 빠진 것으로 세지 않습니다. 사진·쇼츠·안내문(각 1·2·3)은 콘텐츠에서 만들어 채웁니다. 용도는 위 포인트 정보에서 고릅니다.'));
     r.chk.forEach(function (c) {
       var right = null;
       if (c.can && c.s !== 'ok') {
@@ -674,6 +689,30 @@ function loadQR(cb) {
   s.onload = function () { cb(); }; s.onerror = function () { alert('QR 그리는 도구를 불러오지 못했습니다. 인터넷 연결을 확인해 주십시오.'); };
   document.head.appendChild(s);
 }
+/* QR 파일 내려받기 (인쇄소에 줄 파일, 2026-11-18 대표 요청). 여러 개 한 번에 만들기는 대표가 메뉴 자리를 정한 뒤 */
+function qrFileName(p, ext) { return 'QR_' + p.no + '_' + (noEx(p.name) || '').replace(/[\\/:*?"<>|\s]+/g, '') + (isDev() ? '_시험용' : '') + '.' + ext; }
+function saveBlob(blob, name) { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.parentNode.removeChild(a); }, 2000); }
+function qrMake(url) { var q = qrcode(0, 'M'); q.addData(url); q.make(); return q; }
+function qrLabel(p) { return { a: p.no + ' ' + (noEx(p.name) || ''), b: '걸어서 춘천' + (isDev() ? ' · 시험용' : '') }; }
+function qrPngFile(p) {
+  var q = qrMake(p.url), n = q.getModuleCount(), mg = 4, cell = Math.max(10, Math.floor(2000 / (n + mg * 2))), size = cell * (n + mg * 2), lab = Math.round(size * 0.18), t = qrLabel(p);
+  var cv = document.createElement('canvas'); cv.width = size; cv.height = size + lab;
+  var x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.fillStyle = '#000';
+  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) x.fillRect((c + mg) * cell, (r + mg) * cell, cell, cell);
+  x.textAlign = 'center'; x.font = 'bold ' + Math.round(lab * 0.4) + 'px sans-serif'; x.fillText(t.a, size / 2, size + lab * 0.38);
+  x.font = Math.round(lab * 0.26) + 'px sans-serif'; x.fillText(t.b, size / 2, size + lab * 0.8);
+  cv.toBlob(function (b) { saveBlob(b, qrFileName(p, 'png')); }, 'image/png');
+}
+function qrSvgFile(p) {
+  var q = qrMake(p.url), n = q.getModuleCount(), mg = 4, w = n + mg * 2, lab = Math.round(w * 0.18), t = qrLabel(p), d = '';
+  for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.isDark(r, c)) d += 'M' + (c + mg) + ' ' + (r + mg) + 'h1v1h-1z';
+  var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); };
+  var svg = '<' + '?xml version="1.0" encoding="UTF-8"?' + '>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + (w + lab) + '" width="60mm" height="' + (60 * (w + lab) / w).toFixed(1) + 'mm">'
+    + '<rect width="' + w + '" height="' + (w + lab) + '" fill="#fff"/><path d="' + d + '" fill="#000" shape-rendering="crispEdges"/>'
+    + '<text x="' + (w / 2) + '" y="' + (w + lab * 0.38) + '" font-family="sans-serif" font-weight="bold" font-size="' + (lab * 0.4).toFixed(2) + '" text-anchor="middle">' + esc(t.a) + '</text>'
+    + '<text x="' + (w / 2) + '" y="' + (w + lab * 0.8) + '" font-family="sans-serif" font-size="' + (lab * 0.26).toFixed(2) + '" text-anchor="middle">' + esc(t.b) + '</text></svg>';
+  saveBlob(new Blob([svg], { type: 'image/svg+xml' }), qrFileName(p, 'svg'));
+}
 function qrSvg(url, cell) { var q = qrcode(0, 'M'); q.addData(url); q.make(); return q.createSvgTag({ cellSize: cell || 6, margin: 2, scalable: true }); }
 function qrView(p, cno) {
   clear(); header(p.no + ' QR');
@@ -683,6 +722,12 @@ function qrView(p, cno) {
   if (!p.url) box.appendChild(el('p', 'err', '이 포인트에는 QR이 없습니다(지운 상태). 아래 "QR 다시 만들기"로 새로 만들 수 있습니다.'));
   else loadQR(function () { var w = el('div', ''); w.style.maxWidth = '260px'; w.style.margin = '0 auto'; w.innerHTML = qrSvg(p.url, 8); box.appendChild(w); box.appendChild(el('div', 'copy', p.url)); });
   if (p.url) app.appendChild(btn('인쇄', function () { printQR([p], ''); }));
+  if (p.url) {
+    var fc = card(el('h2', '', '파일로 내려받기 (인쇄소용)'), el('p', 'small', 'QR 아래에 포인트 번호·이름이 함께 들어갑니다. 인쇄소에는 SVG(크기를 키워도 깨지지 않음)를 주시고, SVG를 못 받는 곳에는 PNG를 주십시오.'));
+    fc.appendChild(btn('SVG 파일 (인쇄소 권장)', function () { loadQR(function () { qrSvgFile(p); }); }));
+    fc.appendChild(btn('PNG 그림 파일 (고화질)', function () { loadQR(function () { qrPngFile(p); }); }, 'sub'));
+    app.appendChild(fc);
+  }
   app.appendChild(btn('QR 다시 만들기 (예전 QR 막기)', function () {
     ask({ text: p.no + ' 포인트의 QR을 새로 만들까요?\n예전 QR(이미 붙인 것 포함)은 더 이상 열리지 않습니다.', btns: [['새로 만들기', 'ok', 'red'], ['취소', null]] }, function () { api('pQrKey', { no: p.no, op: 'new' }, function (x) { p.url = x.url; qrView(p, cno); }); });
   }, 'sub'));
@@ -776,7 +821,7 @@ function pointCourse(no, keepView) {
         mk.on('click', function () {
           var txt = p.no + ' ' + (noEx(p.name) || '(이름 없음)') + '\n' + pos[p.no].join('·') + '번째 · ' + (p.stage || '임시') + ' · ' + (p.on ? '사용' : '미사용') + ' · 오늘 ' + p.today + '번'
             + (p.courses.length > 1 ? '\n갈림길: ' + p.courses.join('·') + '코스' : '')
-            + '\n' + p.chk.map(function (c) { return c.k + ' ' + CKMARK[c.s]; }).join('  ');
+            + '\n' + ckGroups(p.chk).map(function (c) { return c.t; }).join('  ');
           ask({ text: txt, btns: [[p.on ? '미사용으로' : '사용으로', 'tog', p.on ? 'red' : ''], ['내용 고치기', 'info'], ['QR 보기·인쇄', 'qr', 'sub'], ['닫기', null]] }, function (v) {
             if (v === 'tog') api('setPoint', { no: p.no, on: !p.on }, again);
             else if (v === 'info') { dropMap(); pointForm(r.no, p.no); }
