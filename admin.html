@@ -134,7 +134,16 @@ function header(title) {
   if (ME) t.appendChild(el('div', 'w', ME.name + ' (' + (ME.role === '대표' ? '대표' : '직원') + ')'));
   app.appendChild(t);
 }
-function backBtn() { return btn('관리 첫 화면으로', home, 'sub'); }
+/* 되돌아가기 = 바로 앞 단계 (2026-11-18 대표 요청). NAV.g = 들어온 묶음(코스·운영), NAV.t = 들어온 메뉴(TILES) */
+var NAV = {};
+function backBtn() {
+  var f = document.createDocumentFragment(), go = null, label = '';
+  if (NAV.t) { var tt = NAV.t, gg = NAV.g; go = function () { tileMenu(tt, gg); }; label = tt.t; }
+  else if (NAV.g) { var g2 = NAV.g; go = function () { openGroup(g2); }; label = g2.t; }
+  if (go) f.appendChild(btn('← ' + label + ' 화면으로', function () { dropMap(); go(); }));
+  f.appendChild(btn('관리 첫 화면으로', function () { dropMap(); home(); }, 'sub'));
+  return f;
+}
 
 /* 서버 부르기 */
 function run(fn, args, ok, errBox) {
@@ -227,6 +236,7 @@ var GROUPS = [
 function openItem(x, g) { if (x.fn) x.fn(); else tileMenu(TILES.filter(function (tt) { return tt.k === x.k; })[0], g); }
 function openGroup(g) {
   if (g.items.length === 1) { openItem(g.items[0], null); return; }
+  NAV = { g: g };
   clear(); header(g.t);
   app.appendChild(el('div', 'ghead ' + g.cls, null, el('div', 'gic', g.ic), el('b', '', g.t)));
   var grid = el('div', 'subgrid ' + g.cls);
@@ -237,7 +247,7 @@ function openGroup(g) {
     grid.appendChild(b);
   });
   app.appendChild(grid);
-  app.appendChild(backBtn());
+  app.appendChild(btn('관리 첫 화면으로', home, 'sub'));
 }
 
 function tileMenu(t, from) {
@@ -250,13 +260,15 @@ function tileMenu(t, from) {
     c.appendChild(b);
   });
   app.appendChild(c);
-  if (from) app.appendChild(btn('← ' + from.t + '(으)로', function () { openGroup(from); }, 'sub'));
+  NAV = { g: from || null };
   app.appendChild(backBtn());
+  NAV = { g: from || null, t: t };
 }
 
 function home() {
+  NAV = {};
   api('home', {}, function (r) {
-    ME = r; clear(); header();
+    ME = r; NAV = {}; clear(); header();
     if (r.env) app.appendChild(el('div', 'warn', '[' + r.env + '] 개발 환경입니다. 여기서 만든 자료는 운영에 자동으로 옮겨지지 않습니다.'));
     if (r.test) app.appendChild(el('div', 'warn', '시험모드가 켜져 있습니다. 실제 공개 전에 설정 시트의 "시험모드"를 비워 주십시오.'));
     if (r.autoWipe) app.appendChild(el('div', 'warn', '자동기록지우기가 켜져 있습니다(시험 기간용). 실제 공개 전에 비워 주십시오.'));
