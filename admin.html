@@ -65,6 +65,8 @@ label { font-size: 15px; color: #3e4c59; }
 .pin { background: #1f7a4d; color: #fff; border-radius: 50%; width: 30px; height: 30px; line-height: 26px; text-align: center; font-size: 11px; font-weight: 700; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45); }
 .pin.x { background: #534ab7; border-radius: 7px; }
 .pin.off { background: #9aa5b1; }
+.pin.sq { border-radius: 7px; }
+.legend i.sq { border-radius: 3px; background: #fff !important; border: 2px solid #52606d; width: 10px; height: 10px; }
 .pin.miss::after { content: ''; position: absolute; right: -3px; top: -3px; width: 11px; height: 11px; border-radius: 50%; background: #e02424; border: 2px solid #fff; }
 .pin { position: relative; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: #52606d; margin: 4px 0 0; }
@@ -683,7 +685,7 @@ function pointCourse(no, keepView) {
     app.appendChild(card(el('h1', '', r.no + ' ' + noEx(r.name)),
       el('p', 'small', '포인트 ' + r.points.length + '개 · 켜짐 ' + on + '개 · 꺼짐 ' + (r.points.length - on) + '개 · 빠진 것 ' + miss + '개' + (r.km ? ' · ' + r.km + 'km' : '') + ' · ' + r.stage + ' · ' + onLabel(r.test))));
     var md = el('div'); md.id = 'map';
-    var lg = el('div', 'legend'); [['#1f7a4d', '켜짐'], ['#9aa5b1', '꺼짐'], ['#534ab7', '갈림길(네모)'], ['#e02424', '빨간 점 = 빠진 것 있음']].forEach(function (x) { var s = el('span', '', x[1]); var i = el('i'); i.style.background = x[0]; s.insertBefore(i, s.firstChild); lg.appendChild(s); });
+    var lg = el('div', 'legend'); [['#1f7a4d', '켜짐'], ['#9aa5b1', '꺼짐'], ['sq', '네모 = 갈림길'], ['#e02424', '빨간 점 = 빠진 것 있음']].forEach(function (x) { var s = el('span', '', x[1]); var i = el('i', x[0] === 'sq' ? 'sq' : ''); if (x[0] !== 'sq') i.style.background = x[0]; s.insertBefore(i, s.firstChild); lg.appendChild(s); });
     app.appendChild(card(el('h2', '', '지도'), el('p', 'small', '포인트를 누르면 상황을 보고 켜기·끄기, 정보 고치기를 할 수 있습니다.'), md, lg));
     if (typeof L === 'undefined') md.textContent = '지도를 불러오지 못했습니다.';
     else {
@@ -694,7 +696,7 @@ function pointCourse(no, keepView) {
       if (line.length > 1) L.polyline(line, { color: '#1f7a4d', weight: 5, opacity: 0.6 }).addTo(MAP);
       r.points.forEach(function (p) {
         if (p.lat === null) return;
-        var m = ckMiss(p.chk), cls = 'pin' + (p.courses.length > 1 ? ' x' : '') + (p.on ? '' : ' off') + (m ? ' miss' : '');
+        var m = ckMiss(p.chk), cls = 'pin' + (p.courses.length > 1 ? ' sq' : '') + (p.on ? '' : ' off') + (m ? ' miss' : '');
         var ic = L.divIcon({ className: '', html: '<div class="' + cls + '">' + p.no + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
         var mk = L.marker([p.lat, p.lng], { icon: ic }).addTo(MAP);
         mk.bindTooltip(pos[p.no].join('·') + '번째 · ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)') + (p.on ? ' · 켜짐' : ' · 꺼짐'));
