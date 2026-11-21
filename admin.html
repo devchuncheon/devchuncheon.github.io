@@ -198,6 +198,7 @@ label { font-size: 15px; color: #3e4c59; }
 .pvlabel { font-size: 12px; color: #fff; background: #1f7a4d; display: inline-block; border-radius: 8px; padding: 2px 8px; margin-bottom: 6px; }
 .pvname { font-size: 18px; color: #1f4e3d; margin: 0 0 8px; }
 .pvshort { margin: 8px 0; }
+.pvwrap { position: relative; cursor: pointer; }
 .pvth { position: relative; width: 100%; background: #e4ece7 center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 40px; aspect-ratio: 9 / 16 !important; border-radius: 12px; cursor: pointer; max-height: 60vh; margin: 0 auto; }
 .pvplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,.55); color: #fff; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
 .pvframe { width: 100%; aspect-ratio: 9 / 16; max-height: 60vh; border: 0; border-radius: 12px; background: #000; }
@@ -1762,7 +1763,7 @@ function pvOpen(title) {
 function pvShort(x) {
   var w = el('div', 'pvshort');
   if (x.missing) { w.appendChild(el('div', 'pvmiss', x.no + ' 창고에 없는 번호')); return w; }
-  var th = cThumb(x); th.className = 'th pvth'; th.appendChild(el('span', 'pvplay', '▶'));
+  var th = el('div', 'pvwrap'), im = cThumb(x); im.className = 'th pvth'; th.appendChild(im); th.appendChild(el('span', 'pvplay', '▶')); // ▶는 그림 위에 따로 (그림이 뜨면 글자가 지워지므로)
   var src = x.ytid ? 'https://www.youtube.com/embed/' + x.ytid + '?autoplay=1' : (x.fid ? 'https://drive.google.com/file/d/' + x.fid + '/preview' : '');
   th.onclick = function () { if (!src) return; var f = el('iframe', 'pvframe'); f.src = src; f.allow = 'autoplay; encrypted-media'; f.setAttribute('allowfullscreen', ''); w.replaceChild(f, th); };
   w.appendChild(th);
