@@ -150,6 +150,39 @@ label { font-size: 15px; color: #3e4c59; }
 .svrtime { font-size: 44px; font-weight: 800; color: #1f4e3d; margin: 8px 0; }
 .svrec.on .svrtime { color: #d92d20; }
 .askbg { z-index: 4000; }
+/* 콘텐츠 붙이기 (2026-11-21) */
+.cbox { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.ctile { position: relative; background: #f7f9f8; border: 2px solid #dfe7e2; border-radius: 12px; overflow: hidden; cursor: grab; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; min-height: 120px; display: flex; flex-direction: column; }
+.ctile.rep { border-color: #1f7a4d; }
+.ctile.over { outline: 3px dashed #d9480f; outline-offset: -3px; }
+.ctile.drag { opacity: .4; }
+.ctile .th { width: 100%; aspect-ratio: 3 / 4; background: #e4ece7 center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 30px; color: #52606d; }
+.ctile .tx { width: 100%; aspect-ratio: 3 / 4; padding: 8px; font-size: 12px; line-height: 1.4; color: #3e4c59; overflow: hidden; white-space: pre-line; background: #fffdf3; }
+.ctile .cap { padding: 5px 6px; font-size: 12px; line-height: 1.3; }
+.ctile .cap b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctile .cap span { color: #52606d; }
+.ctile .bd { position: absolute; left: 4px; top: 4px; background: #1f7a4d; color: #fff; font-size: 11px; font-weight: 700; border-radius: 8px; padding: 2px 6px; }
+.ctile .bd.cm { left: auto; right: 4px; background: #5b4bb7; }
+.cempty { border: 2px dashed #cbd2d9; border-radius: 12px; min-height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #7b8794; font-size: 14px; cursor: pointer; background: #fff; text-align: center; padding: 6px; }
+.cempty.over { border-color: #d9480f; background: #fff4e6; }
+.cempty.skip { cursor: default; background: #f5f7fa; }
+.cempty b { font-size: 26px; color: #1f4e3d; }
+.chelp { font-size: 13px; color: #52606d; background: #eef5f0; border-radius: 10px; padding: 8px 10px; margin: 6px 0 0; line-height: 1.5; }
+.ccom { margin-top: 12px; border-top: 1px solid #eef0f2; padding-top: 10px; }
+.ccom h3 { font-size: 15px; margin: 0 0 4px; color: #5b4bb7; }
+.citem { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid #f2f4f6; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.citem:first-of-type { border-top: 0; }
+.citem .mi { flex: none; width: 44px; height: 44px; border-radius: 8px; background: #e4ece7 center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+.citem .l { flex: 1; min-width: 0; font-size: 14px; }
+.citem .l b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.citem .l span { font-size: 12px; color: #52606d; }
+.citem .sw { min-width: 60px; height: 34px; font-size: 14px; }
+.cmenu { position: fixed; z-index: 3500; background: #fff; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); padding: 6px; min-width: 150px; }
+.cmenu button { display: block; width: 100%; text-align: left; border: 0; background: none; font-size: 16px; padding: 10px 12px; border-radius: 8px; cursor: pointer; color: #1f2933; }
+.cmenu button:hover { background: #eef5f0; }
+.cmenu button.red { color: #b42318; }
+.cmenu .t { font-size: 12px; color: #7b8794; padding: 4px 12px 6px; }
+.cprev { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 10px; background: #000; margin: 6px 0; }
 </style>
 </head>
 <body>
@@ -253,7 +286,7 @@ function changePw(first) {
 var TILES = [
   { k: '코스', ic: '🗺️', t: '코스 설계', top: function (c) { courseStats(c); }, items: [['코스 만들기·고치기 (지도)', function () { designList(); }], ['코스 공개·숨김', function () { courses(); }, '코스 테스트 (가능·준비 중)'], ['코스 내보내기']] }, // 코스 미리보기는 지운 메뉴 (2026-11-18, 코스 만들기로 확인)
   { k: '포인트', ic: '📍', t: '포인트', items: [['포인트 관리 (코스 지도)', function () { pointCourses(); }]] }, // 포인트 목록·포인트 미리보기·선물처·홍보처·휴식처는 지운 메뉴 (2026-11-18 대표 결정)
-  { k: '콘텐츠', ic: '🎬', t: '콘텐츠', items: [['콘텐츠 붙이기'], ['콘텐츠 창고'], ['유튜브 주소 가져오기']] },
+  { k: '콘텐츠', ic: '🎬', t: '콘텐츠', items: [['콘텐츠 붙이기 (포인트별)', function () { contentCourses(); }], ['콘텐츠 창고'], ['유튜브 주소 가져오기']] },
   { k: '답사', ic: '🚶', t: '답사', items: [['답사 시작 (휴대폰)', function () { surveyCourses(); }]] },
   { k: '운영', ic: '🛠️', t: '운영', items: [['긴급공지·길 통제', function () { notice(); }], ['선물처 운영·오늘 마감', function () { stores(); }], ['운영 조건·상황 단추']] },
   { k: '통계', ic: '📊', t: '통계', items: [['기본 통계'], ['특별 요청'], ['질문 관리']] }
@@ -496,6 +529,7 @@ function pointForm(cno, no, msg) {
     });
     app.appendChild(card(el('h2', '', '포인트 단계'), el('p', 'small', '확인한 뒤 손으로 넘깁니다.'), chips));
     if (PF_FROM === 'p') app.appendChild(btn(cno ? cno + '코스 포인트 관리로 돌아가기' : '포인트 관리로 돌아가기', function () { if (cno) pointCourse(cno); else pointCourses(); }, 'sub'));
+    if (PF_FROM === 'k') app.appendChild(btn('포인트 콘텐츠로 돌아가기', function () { contentPoint(no, cno); }, 'sub')); // 콘텐츠 붙이기에서 온 경우 (2026-11-21)
     else if (cno) app.appendChild(btn(cno + '코스 지도로 돌아가기', function () { courseMap(cno); }, 'sub'));
     app.appendChild(btn('관리 첫 화면으로', home, 'sub'));
   });
@@ -1402,6 +1436,247 @@ function admins() {
 if (LINK === 'setup') setup();
 else if (store(KEY)) home();
 else login('');
+
+/* ================= 콘텐츠 붙이기 1차 (2026-11-21 대표 결정) =================
+   포인트 화면 = 쇼츠·사진·안내문 상자(각 3칸, 맨 앞 = 대표) + 종류별 공통 목록.
+   끌어서 순서 바꾸기(칸 위에 놓으면 자리가 바뀜), 오른쪽 마우스(휴대폰은 길게 누르기) = 대표로·삭제 메뉴 */
+var C_KINDS = [['쇼츠', '🎬'], ['사진', '📷'], ['안내문', '📝']];
+var CP = null; // 지금 보고 있는 포인트 콘텐츠 { no, cno, data }
+function contentCourses() {
+  dropMap();
+  api('cCourses', {}, function (r) {
+    clear(); header('콘텐츠 붙이기');
+    var c = card(el('h1', '', '🎬 콘텐츠 붙이기'), el('p', 'small', '코스를 고르면 포인트 목록이 나옵니다. 포인트를 열어 쇼츠·사진·안내문을 붙입니다.'));
+    if (!r.list.length) c.appendChild(el('p', 'small', '아직 코스가 없습니다.'));
+    r.list.forEach(function (x) {
+      var b = el('button', 'sw on', '열기'); b.onclick = function () { contentCourse(x.no); };
+      c.appendChild(row(x.no + ' ' + noEx(x.name), '포인트 ' + x.n + '개 · 붙은 콘텐츠 ' + x.have + ' / ' + x.all + '칸 · ' + x.stage, b));
+    });
+    app.appendChild(c);
+    app.appendChild(backBtn());
+  });
+}
+function contentCourse(cno) {
+  dropMap();
+  api('cCourse', { no: cno }, function (r) {
+    clear(); header(r.no + '코스 콘텐츠');
+    var c = card(el('h1', '', '🎬 ' + r.no + ' ' + noEx(r.name)), el('p', 'small', '걷는 순서대로입니다. [콘텐츠]를 누르면 그 포인트의 쇼츠·사진·안내문 상자가 열립니다.'));
+    if (!r.points.length) c.appendChild(el('p', 'small', '이 코스에 포인트가 없습니다.'));
+    r.points.forEach(function (p, i) {
+      var b = el('button', 'sw on', '콘텐츠'); b.onclick = function () { contentPoint(p.no, r.no); };
+      var sub = '쇼츠 ' + p.cnt['쇼츠'] + '/3 · 사진 ' + p.cnt['사진'] + '/3 · 안내문 ' + p.cnt['안내문'] + '/3 · ' + p.stage;
+      var rw = row((i + 1) + '. ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)'), sub, b);
+      if (p.chk) rw.querySelector('.l').appendChild(ckEl(p.chk));
+      c.appendChild(rw);
+    });
+    app.appendChild(c);
+    app.appendChild(btn('← 콘텐츠 코스 목록으로', function () { contentCourses(); }));
+    app.appendChild(backBtn());
+  });
+}
+function cThumb(x) {
+  if (x.kind === '안내문') return el('div', 'tx', x.text || x.title);
+  var t = el('div', 'th', x.kind === '쇼츠' ? '🎬' : '📷');
+  var src = x.ytid ? 'https://i.ytimg.com/vi/' + x.ytid + '/hqdefault.jpg' : (x.fid ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(x.fid) + '&sz=w400' : '');
+  if (src) { var im = new Image(); im.onload = function () { t.style.backgroundImage = 'url("' + src + '")'; t.textContent = ''; }; im.src = src; }
+  return t;
+}
+function cOpenUrl(x) { return x.yt || x.url || (x.fid ? 'https://drive.google.com/file/d/' + x.fid + '/view' : ''); }
+function cPreview(x) {
+  var bg = el('div', 'askbg'), box = el('div', 'askbox');
+  var close = function () { if (bg.parentNode) bg.parentNode.removeChild(bg); };
+  bg.onclick = function (e) { if (e.target === bg) close(); };
+  box.appendChild(el('h2', '', x.no + ' ' + (x.title || '')));
+  box.appendChild(el('p', 'small', x.kind + (x.common ? ' · 공통 자료' : (x.pno ? ' · ' + (x.cno ? x.cno + '-' : '') + x.pno + '에서 만듦' : '')) + (x.who ? ' · ' + x.who : '') + (x.at ? ' · ' + String(x.at).slice(0, 16) : '')));
+  if (x.kind === '안내문') box.appendChild(el('p', '', x.text));
+  else if (x.kind === '사진' && x.fid) { var im = el('img', 'cprev'); im.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(x.fid) + '&sz=w1200'; box.appendChild(im); }
+  else if (x.ytid) { var fr = el('iframe', 'cprev'); fr.src = 'https://www.youtube.com/embed/' + x.ytid; fr.style.aspectRatio = '9 / 16'; fr.style.height = '60vh'; fr.allow = 'autoplay; encrypted-media'; fr.setAttribute('allowfullscreen', ''); box.appendChild(fr); }
+  else if (x.fid) { var fv = el('iframe', 'cprev'); fv.src = 'https://drive.google.com/file/d/' + x.fid + '/preview'; fv.style.height = '60vh'; fv.allow = 'autoplay'; box.appendChild(fv); }
+  if (x.kind === '쇼츠') box.appendChild(el('p', 'small', x.yt ? '유튜브 주소: ' + x.yt : '유튜브 주소 대기 (아직 올리지 않았거나 주소를 가져오지 않음)'));
+  if (x.used && x.used.length) box.appendChild(el('p', 'small', '쓰인 포인트: ' + x.used.join(', ')));
+  var u = cOpenUrl(x);
+  if (u) box.appendChild(btn('새 창에서 열기', function () { window.open(u, '_blank'); }, 'sub'));
+  box.appendChild(btn('닫기', close));
+  bg.appendChild(box); document.body.appendChild(bg);
+}
+/* 오른쪽 마우스·길게 누르기 메뉴. items: [[글자, 함수, 'red'(선택)]] */
+function cMenu(x, y, title, items) {
+  cMenuClose();
+  var m = el('div', 'cmenu'); m.id = 'cmenu';
+  if (title) m.appendChild(el('div', 't', title));
+  items.forEach(function (it) { var b = el('button', it[2] || '', it[0]); b.onclick = function (e) { e.stopPropagation(); cMenuClose(); it[1](); }; m.appendChild(b); });
+  document.body.appendChild(m);
+  var w = m.offsetWidth, hh = m.offsetHeight;
+  m.style.left = Math.max(6, Math.min(x, window.innerWidth - w - 6)) + 'px';
+  m.style.top = Math.max(6, Math.min(y, window.innerHeight - hh - 6)) + 'px';
+  setTimeout(function () { document.addEventListener('pointerdown', cMenuOut, true); }, 0);
+}
+function cMenuOut(e) { var m = document.getElementById('cmenu'); if (m && !m.contains(e.target)) cMenuClose(); }
+function cMenuClose() { var m = document.getElementById('cmenu'); if (m) m.parentNode.removeChild(m); document.removeEventListener('pointerdown', cMenuOut, true); }
+/* 길게 누르기(휴대폰) → fn(x, y) */
+function cLongPress(node, fn) {
+  var tm = null, sx = 0, sy = 0;
+  node.addEventListener('touchstart', function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; tm = setTimeout(function () { tm = null; node._lp = true; if (navigator.vibrate) navigator.vibrate(30); fn(sx, sy); }, 550); }, { passive: true });
+  var stop = function () { if (tm) { clearTimeout(tm); tm = null; } };
+  node.addEventListener('touchmove', function (e) { var t = e.touches[0]; if (Math.abs(t.clientX - sx) > 10 || Math.abs(t.clientY - sy) > 10) stop(); }, { passive: true });
+  node.addEventListener('touchend', stop); node.addEventListener('touchcancel', stop);
+  node.addEventListener('contextmenu', function (e) { e.preventDefault(); if (node._lp) { node._lp = false; return; } fn(e.clientX, e.clientY); });
+}
+function contentPoint(no, cno) {
+  dropMap(); cMenuClose();
+  api('cPoint', { no: no, cno: cno || '' }, function (r) {
+    CP = { no: r.no, cno: cno || r.courses[0] || '', data: r };
+    clear(); header('포인트 콘텐츠');
+    var top = card(el('h1', '', '🎬 ' + r.no + ' ' + (noEx(r.name) || '(이름 없음)')),
+      el('p', 'small', '지나는 코스 ' + (r.courses.join('·') || '없음') + (r.courses.length > 1 ? ' (갈림길)' : '') + ' · 단계 ' + r.stage),
+      el('div', 'chelp', '· 칸을 잡고 다른 칸 위에 놓으면 자리가 바뀝니다. 맨 앞 칸이 대표입니다.\n· 칸에 대고 오른쪽 마우스(휴대폰은 길게 누르기) → 대표로·삭제.\n· 빈 칸을 누르면 내 자료를 올립니다. 아래 공통 목록의 자료는 [넣기] 또는 빈 칸으로 끌어 넣습니다.'));
+    top.lastChild.style.whiteSpace = 'pre-line';
+    app.appendChild(top);
+    C_KINDS.forEach(function (k) { app.appendChild(cBoxCard(r, k[0], k[1])); });
+    if (CP.cno) app.appendChild(btn('← ' + CP.cno + '코스 포인트 목록으로', function () { contentCourse(CP.cno); }));
+    app.appendChild(btn('포인트 내용 고치기 (이름·용도·설명)', function () { PF_FROM = 'k'; pointForm(CP.cno, r.no); }, 'sub'));
+    app.appendChild(backBtn());
+  });
+}
+function cBoxCard(r, kind, ic) {
+  var list = r.boxes[kind] || [], n = r.slots || 3;
+  var c = card(el('h2', '', ic + ' ' + kind + ' (' + list.length + '/' + n + ')'));
+  var box = el('div', 'cbox');
+  for (var i = 0; i < n; i++) box.appendChild(list[i] ? cTile(r, kind, list, i) : cEmpty(r, kind, i));
+  c.appendChild(box);
+  /* 공통 목록 */
+  var cm = el('div', 'ccom', null, el('h3', '', '공통 ' + kind + ' 목록'));
+  var com = r.common[kind] || [];
+  if (!com.length) cm.appendChild(el('p', 'small', '아직 공통 ' + kind + '이(가) 없습니다. 여러 포인트에 함께 쓸 자료를 올려 두십시오.'));
+  com.forEach(function (x) { cm.appendChild(cComItem(r, kind, x, list)); });
+  cm.appendChild(btn('+ 공통으로 올리기', function () { cAddDialog(kind, { common: true }); }, 'sub'));
+  c.appendChild(cm);
+  return c;
+}
+function cTile(r, kind, list, i) {
+  var x = list[i], t = el('div', 'ctile' + (i === 0 ? ' rep' : ''));
+  t.appendChild(cThumb(x));
+  t.appendChild(el('div', 'cap', null, el('b', '', x.title || x.no), el('span', '', x.no + (x.kind === '쇼츠' && !x.yt ? ' · 주소 대기' : ''))));
+  if (i === 0) t.appendChild(el('div', 'bd', '대표'));
+  if (x.common) t.appendChild(el('div', 'bd cm', '공통'));
+  t.draggable = true;
+  t.addEventListener('dragstart', function (e) { e.dataTransfer.setData('text/plain', 'slot|' + kind + '|' + i); e.dataTransfer.effectAllowed = 'move'; t.classList.add('drag'); });
+  t.addEventListener('dragend', function () { t.classList.remove('drag'); });
+  t.addEventListener('dragover', function (e) { e.preventDefault(); t.classList.add('over'); });
+  t.addEventListener('dragleave', function () { t.classList.remove('over'); });
+  t.addEventListener('drop', function (e) {
+    e.preventDefault(); t.classList.remove('over');
+    var d = String(e.dataTransfer.getData('text/plain') || '').split('|');
+    if (d[0] === 'slot' && d[1] === kind) { var j = +d[2]; if (j !== i) cSwap(kind, list, j, i); }
+    else if (d[0] === 'common') ask({ text: '칸이 차 있습니다. 공통 자료는 빈 칸으로 끌어 놓거나 [넣기]를 눌러 주십시오.', btns: [['확인', 'ok']] });
+  });
+  t.addEventListener('click', function () { if (t._lp) { t._lp = false; return; } cPreview(x); });
+  cLongPress(t, function (cx, cy) {
+    var items = [];
+    if (i > 0) items.push(['★ 대표로', function () { var o = list.map(function (y) { return y.no; }); o.unshift(o.splice(i, 1)[0]); cSaveOrder(kind, o); }]);
+    items.push(['열어 보기', function () { cPreview(x); }]);
+    items.push(['삭제', function () { cRemove(kind, list, i); }, 'red']);
+    cMenu(cx, cy, x.no + ' ' + (x.title || ''), items);
+  });
+  return t;
+}
+function cEmpty(r, kind, i) {
+  var sk = r.skip.indexOf(kind + ' ' + (i + 1)) >= 0;
+  var e = el('div', 'cempty' + (sk ? ' skip' : ''), null, el('b', '', sk ? '—' : '+'), el('span', '', sk ? kind + ' ' + (i + 1) + ' 안 씀' : '내 자료 올리기'));
+  if (!sk) e.onclick = function () { cAddDialog(kind, { common: false }); };
+  e.addEventListener('dragover', function (ev) { ev.preventDefault(); e.classList.add('over'); });
+  e.addEventListener('dragleave', function () { e.classList.remove('over'); });
+  e.addEventListener('drop', function (ev) {
+    ev.preventDefault(); e.classList.remove('over');
+    var d = String(ev.dataTransfer.getData('text/plain') || '').split('|');
+    if (d[0] === 'common' && d[1] === kind) cAttach(d[2]);
+    else if (d[0] === 'common') ask({ text: d[1] + ' 자료는 ' + d[1] + ' 상자에만 넣을 수 있습니다.', btns: [['확인', 'ok']] });
+  });
+  return e;
+}
+function cComItem(r, kind, x, list) {
+  var inBox = list.some(function (y) { return y.no === x.no; }), full = list.length >= (r.slots || 3);
+  var mi = el('div', 'mi', kind === '쇼츠' ? '🎬' : kind === '사진' ? '📷' : '📝');
+  var src = x.ytid ? 'https://i.ytimg.com/vi/' + x.ytid + '/default.jpg' : (x.fid && kind !== '안내문' ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(x.fid) + '&sz=w120' : '');
+  if (src) { var im = new Image(); im.onload = function () { mi.style.backgroundImage = 'url("' + src + '")'; mi.textContent = ''; }; im.src = src; }
+  var b = el('button', 'sw ' + (inBox || full ? 'off' : 'on'), inBox ? '들어 있음' : '넣기');
+  if (inBox || full) b.disabled = true; else b.onclick = function (e) { e.stopPropagation(); cAttach(x.no); };
+  var it = el('div', 'citem', null, mi, el('div', 'l', null, el('b', '', x.title || x.no), el('span', '', x.no + (x.used.length ? ' · 쓰인 곳 ' + x.used.join(', ') : ' · 아직 안 쓰임'))), b);
+  it.draggable = !inBox;
+  it.addEventListener('dragstart', function (e) { e.dataTransfer.setData('text/plain', 'common|' + kind + '|' + x.no); e.dataTransfer.effectAllowed = 'copy'; });
+  it.addEventListener('click', function () { if (it._lp) { it._lp = false; return; } cPreview(x); });
+  cLongPress(it, function (cx, cy) {
+    var items = [];
+    if (!inBox && !full) items.push(['이 포인트에 넣기', function () { cAttach(x.no); }]);
+    items.push(['열어 보기', function () { cPreview(x); }]);
+    items.push(['공통 목록에서 지우기', function () { cDropCommon(x); }, 'red']);
+    cMenu(cx, cy, '공통 ' + x.no + ' ' + (x.title || ''), items);
+  });
+  return it;
+}
+function cSwap(kind, list, a, b) { var o = list.map(function (y) { return y.no; }); var t = o[a]; o[a] = o[b]; o[b] = t; cSaveOrder(kind, o); }
+function cSaveOrder(kind, o) { api('cOrder', { no: CP.no, kind: kind, order: o }, function () { contentPoint(CP.no, CP.cno); }); }
+function cAttach(cid) { api('cAttach', { no: CP.no, cid: cid }, function () { contentPoint(CP.no, CP.cno); }); }
+function cRemove(kind, list, i) {
+  var x = list[i], others = (x.used || []).filter(function (p) { return p !== CP.no; });
+  var t = x.no + ' ' + (x.title || '') + '\n';
+  if (x.common) t += '공통 자료입니다. 이 포인트에서만 빠지고 공통 목록에는 그대로 남습니다.';
+  else if (others.length) t += '다른 포인트(' + others.join(', ') + ')에도 쓰이고 있어 이 포인트에서만 빠집니다.';
+  else t += '이 포인트에서 빠집니다.' + (x.fid && x.url ? ' 파일은 바로 없애지 않고 드라이브의 "지운 자료" 폴더로 옮겨 두니, 잘못 지워도 되살릴 수 있습니다.' : '') + (x.yt ? '\n이 쇼츠는 유튜브에 올라가 있습니다. 유튜브 영상은 툴이 지울 수 없으니 스튜디오에서 따로 지워 주세요.' : '');
+  if (i === 0 && list.length > 1) t += '\n대표를 지우면 다음 칸이 대표가 됩니다.';
+  ask({ text: t + '\n\n삭제할까요?', btns: [['삭제', 'ok', 'red'], ['취소', null]] }, function () {
+    api('cRemove', { no: CP.no, kind: kind, cid: x.no }, function (res) {
+      var go = function () { contentPoint(CP.no, CP.cno); };
+      if (res && res.yt) ask({ text: '지웠습니다.\n이 쇼츠는 유튜브에 올라가 있습니다. 유튜브 영상은 스튜디오에서 따로 지워 주세요.\n' + res.yt, btns: [['확인', 'ok']] }, go);
+      else go();
+    });
+  });
+}
+function cDropCommon(x) {
+  if (x.used.length) { ask({ text: '이 공통 자료는 포인트 ' + x.used.join(', ') + '에 쓰이고 있습니다. 그 포인트에서 먼저 빼 주십시오.', btns: [['확인', 'ok']] }); return; }
+  ask({ text: '공통 ' + x.no + ' ' + (x.title || '') + '\n공통 목록에서 지울까요?' + (x.fid && x.url ? '\n파일은 드라이브의 "지운 자료" 폴더로 옮겨 둡니다.' : '') + (x.yt ? '\n유튜브 영상은 스튜디오에서 따로 지워 주세요.' : ''), btns: [['지우기', 'ok', 'red'], ['취소', null]] }, function () {
+    api('cDropCommon', { cid: x.no }, function () { contentPoint(CP.no, CP.cno); });
+  });
+}
+/* 자료 올리기 상자: 내 자료(이 포인트) / 공통. 사진·쇼츠 = 파일 또는 주소(유튜브·드라이브), 안내문 = 글 */
+var C_MAX = { '사진': 20, '쇼츠': 35 };
+function cAddDialog(kind, o) {
+  var bg = el('div', 'askbg'), box = el('div', 'askbox');
+  var close = function () { if (bg.parentNode) bg.parentNode.removeChild(bg); };
+  var err = el('p', 'err');
+  box.appendChild(el('h2', '', (o.common ? '공통 ' + kind + ' 올리기' : CP.no + ' ' + kind + ' 올리기')));
+  box.appendChild(el('label', '', '제목 (비우면 파일 이름)'));
+  var ti = input('text', '예: 봉의산 골목 인사'); box.appendChild(ti);
+  var fi = null, li = null, ta = null;
+  if (kind === '안내문') { box.appendChild(el('label', '', '안내문 글')); ta = el('textarea'); ta.placeholder = '방문자에게 보일 안내 글'; box.appendChild(ta); }
+  else {
+    box.appendChild(el('label', '', kind === '사진' ? '사진 파일 (' + C_MAX[kind] + 'MB까지)' : '동영상 파일 (' + C_MAX[kind] + 'MB까지)'));
+    fi = el('input'); fi.type = 'file'; fi.accept = kind === '사진' ? 'image/*' : 'video/*'; fi.style.margin = '6px 0 10px'; box.appendChild(fi);
+    box.appendChild(el('label', '', '또는 주소 넣기 (유튜브 · 구글 드라이브 파일)'));
+    li = input('text', 'https://'); box.appendChild(li);
+    if (kind === '쇼츠') box.appendChild(el('p', 'small', '큰 영상은 드라이브에 먼저 올리고 그 파일 주소를 넣어 주십시오. 유튜브 주소는 나중에 "유튜브 주소 가져오기"로 채울 수 있습니다.'));
+  }
+  box.appendChild(err);
+  box.appendChild(btn('올리기', function () {
+    err.textContent = '';
+    var args = { kind: kind, common: !!o.common, no: o.common ? '' : CP.no, cno: CP.cno, title: ti.value };
+    if (ta) { args.text = ta.value; if (!args.text.trim()) { err.textContent = '안내문 글을 적어 주십시오.'; return; } send(); return; }
+    var f = fi && fi.files[0];
+    if (f) {
+      if (f.size > C_MAX[kind] * 1024 * 1024) { err.textContent = '파일이 너무 큽니다(' + Math.round(f.size / 1048576) + 'MB). ' + C_MAX[kind] + 'MB까지 올릴 수 있습니다. 드라이브에 올린 뒤 주소를 넣어 주십시오.'; return; }
+      busy(true);
+      blobB64(f).then(function (b64) { busy(false); args.b64 = b64; args.mime = f.type || ''; args.fname = f.name; send(); }, function () { busy(false); err.textContent = '파일을 읽지 못했습니다.'; });
+      return;
+    }
+    if (li && li.value.trim()) { args.link = li.value.trim(); send(); return; }
+    err.textContent = '파일을 고르거나 주소를 넣어 주십시오.';
+    function send() { api('cAdd', args, function () { close(); contentPoint(CP.no, CP.cno); }, err); }
+  }));
+  box.appendChild(btn('취소', close, 'sub'));
+  bg.appendChild(box); document.body.appendChild(bg);
+  setTimeout(function () { ti.focus(); }, 50);
+}
+
 </script>
 </body>
 </html>
