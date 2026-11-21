@@ -189,6 +189,13 @@ label { font-size: 15px; color: #3e4c59; }
 .cchip.ok { background: #1f7a4d; color: #fff; }
 .cchip.no { background: #fde8e8; color: #b42318; border-color: #f0b4b4; }
 .cchip.skip { background: #eef0f2; color: #9aa5b1; text-decoration: line-through; }
+.row .l .cchip { font-size: 12px; word-break: keep-all; }
+.row .l .cchip.ok { color: #fff; }
+.row .l .cchip.no { color: #b42318; }
+.row .l .cchip.skip { color: #9aa5b1; }
+.row .l .ck.ok { color: #1f7a4d; }
+.row .l .ck.no { color: #b42318; }
+.row .l .ck.skip { color: #7b8794; }
 .pvbg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 3200; display: flex; justify-content: center; align-items: stretch; padding: 12px; }
 .pvphone { width: 100%; max-width: 400px; background: #f2f4f1; border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 8px 30px rgba(0,0,0,.4); border: 6px solid #1f2933; }
 .pvbar { display: flex; align-items: center; justify-content: space-between; background: #1f4e3d; color: #fff; padding: 10px 12px; font-size: 15px; }
@@ -515,7 +522,7 @@ function ckGroups(chk) {
     return { s: ss.indexOf('no') >= 0 ? 'no' : ss.indexOf('ok') >= 0 ? 'ok' : 'skip', t: x.g + ' ' + x.list.map(function (y) { return y.n + CKMARK[y.s]; }).join(' ') };
   });
 }
-function ckEl(chk) { var d = el('div', 'ckl'); ckGroups(chk).forEach(function (c) { d.appendChild(el('span', 'ck ' + c.s, c.t)); }); return d; }
+function ckEl(chk) { var d = el('div', 'ckl'); (chk || []).forEach(function (c) { var s = el('span', 'ck ' + c.s, c.g ? c.k.replace(' ', '') : c.k + ' ' + CKMARK[c.s]); s.title = c.s === 'ok' ? '붙어 있음' : c.s === 'skip' ? '안 씀' : '아직 없음'; if (c.s === 'skip') s.style.textDecoration = 'line-through'; d.appendChild(s); }); return d; } // (사진1)(사진2)(사진3)… 칸마다 따로 (2026-11-21 대표 요청)
 function ckMiss(chk) { return (chk || []).filter(function (c) { return c.s === 'no'; }).length; }
 
 /* 포인트 정보 (2단계): 표시 이름·성격·의도·설명·찾는 법, 포인트 단계, 빠진 것 */
@@ -537,16 +544,7 @@ function pointForm(cno, no, msg) {
       btn('저장', function () {
         api('dSavePoint', { no: r.no, name: nm.value, kinds: kc.value(), purpose: pu.value, desc: de.value, find: fd.value }, function () { pointForm(cno, r.no, '저장했습니다.'); }, err);
       }), err, ok));
-    var cc = card(el('h2', '', '빠진 것'), el('p', 'small', '✗ 표시가 할 일입니다. 이 포인트에 필요 없는 항목은 "안 씀"을 누르면 —로 바뀌고 빠진 것으로 세지 않습니다. 사진·쇼츠·안내문(각 1·2·3)은 콘텐츠에서 만들어 채웁니다. 용도는 위 포인트 정보에서 고릅니다.'));
-    r.chk.forEach(function (c) {
-      var right = null;
-      if (c.can && c.s !== 'ok') {
-        right = el('button', 'sw ' + (c.s === 'skip' ? 'on' : 'off'), c.s === 'skip' ? '되살리기' : '안 씀');
-        right.onclick = function () { api('dPointSkip', { no: r.no, item: c.k, skip: c.s !== 'skip' }, function () { pointForm(cno, r.no); }); };
-      }
-      cc.appendChild(row(c.k + ' ' + CKMARK[c.s], c.s === 'ok' ? '붙어 있음' : c.s === 'skip' ? '일부러 뺌' : '아직 없음', right));
-    });
-    app.appendChild(cc);
+    // "빠진 것" 상자는 지움 (2026-11-21 대표 요청). 칸 안 씀/되살리기는 콘텐츠 화면 빈 칸의 오른쪽 마우스 메뉴로 옮김
     var chips = el('div', 'chips');
     r.stages.forEach(function (s) {
       var ch = el('button', 'chip' + (s === r.stage ? ' sel' : ''), s);
@@ -558,7 +556,7 @@ function pointForm(cno, no, msg) {
     });
     app.appendChild(card(el('h2', '', '포인트 단계'), el('p', 'small', '확인한 뒤 손으로 넘깁니다.'), chips));
     if (PF_FROM === 'p') app.appendChild(btn(cno ? cno + '코스 포인트 관리로 돌아가기' : '포인트 관리로 돌아가기', function () { if (cno) pointCourse(cno); else pointCourses(); }, 'sub'));
-    if (PF_FROM === 'k') app.appendChild(btn('포인트 콘텐츠로 돌아가기', function () { contentPoint(no, cno); }, 'sub')); // 콘텐츠 붙이기에서 온 경우 (2026-11-21)
+    else if (PF_FROM === 'k') app.appendChild(btn('포인트 콘텐츠로 돌아가기', function () { contentPoint(no, cno); }, 'sub')); // 콘텐츠 붙이기에서 온 경우 (2026-11-21)
     else if (cno) app.appendChild(btn(cno + '코스 지도로 돌아가기', function () { courseMap(cno); }, 'sub'));
     app.appendChild(btn('관리 첫 화면으로', home, 'sub'));
   });
@@ -1562,9 +1560,9 @@ function contentPoint(no, cno) {
       el('p', 'small', '지나는 코스 ' + (r.courses.join('·') || '없음') + (r.courses.length > 1 ? ' (갈림길)' : '') + ' · 단계 ' + r.stage),
       el('div', 'chelp', '· 칸을 잡고 다른 칸 위에 놓으면 자리가 바뀝니다. 맨 앞 칸이 대표입니다.\n· 칸에 대고 오른쪽 마우스(휴대폰은 길게 누르기) → 대표로·삭제.\n· 빈 칸을 누르면 내 자료를 올립니다. 아래 공통 목록의 자료는 [넣기] 또는 빈 칸으로 끌어 넣습니다.'));
     top.lastChild.style.whiteSpace = 'pre-line';
-    top.appendChild(btn('👁 포인트 미리보기', function () { cPointPreview(r); }));
     app.appendChild(top);
     C_KINDS.forEach(function (k) { app.appendChild(cBoxCard(r, k[0], k[1])); });
+    app.appendChild(btn('👁 포인트 미리보기', function () { cPointPreview(r); })); // 되돌아가기 단추 바로 위 (2026-11-21)
     if (CP.cno) app.appendChild(btn('← ' + CP.cno + '코스 포인트 목록으로', function () { contentCourse(CP.cno); }));
     app.appendChild(btn('포인트 내용 고치기 (이름·용도·설명)', function () { PF_FROM = 'k'; pointForm(CP.cno, r.no); }, 'sub'));
     app.appendChild(backBtn());
@@ -1615,7 +1613,12 @@ function cTile(r, kind, list, i) {
 function cEmpty(r, kind, i) {
   var sk = r.skip.indexOf(kind + ' ' + (i + 1)) >= 0;
   var e = el('div', 'cempty' + (sk ? ' skip' : ''), null, el('b', '', sk ? '—' : '+'), el('span', '', sk ? kind + ' ' + (i + 1) + ' 안 씀' : '내 자료 올리기'));
-  if (!sk) e.onclick = function () { cAddDialog(kind, { common: false }); };
+  if (!sk) e.onclick = function () { if (e._lp) { e._lp = false; return; } cAddDialog(kind, { common: false }); };
+  cLongPress(e, function (cx, cy) {
+    var it = kind + ' ' + (i + 1), items = sk ? [['되살리기 (이 칸 씀)', function () { api('dPointSkip', { no: CP.no, item: it, skip: false }, function () { contentPoint(CP.no, CP.cno); }); }]]
+      : [['내 자료 올리기', function () { cAddDialog(kind, { common: false }); }], ['안 씀 (이 칸은 쓰지 않음)', function () { api('dPointSkip', { no: CP.no, item: it, skip: true }, function () { contentPoint(CP.no, CP.cno); }); }]];
+    cMenu(cx, cy, kind + (i + 1) + ' 칸', items);
+  });
   e.addEventListener('dragover', function (ev) { ev.preventDefault(); e.classList.add('over'); });
   e.addEventListener('dragleave', function () { e.classList.remove('over'); });
   e.addEventListener('drop', function (ev) {
