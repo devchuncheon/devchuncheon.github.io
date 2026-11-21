@@ -182,6 +182,34 @@ label { font-size: 15px; color: #3e4c59; }
 .cmenu button:hover { background: #eef5f0; }
 .cmenu button.red { color: #b42318; }
 .cmenu .t { font-size: 12px; color: #7b8794; padding: 4px 12px 6px; }
+/* 콘텐츠 칸 표시·미리보기 (2026-11-21) */
+.cchips { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 4px; }
+.cgrp { display: inline-flex; gap: 3px; }
+.cchip { display: inline-block; font-size: 12px; font-weight: 700; border-radius: 7px; padding: 2px 6px; white-space: nowrap; border: 1px solid transparent; }
+.cchip.ok { background: #1f7a4d; color: #fff; }
+.cchip.no { background: #fde8e8; color: #b42318; border-color: #f0b4b4; }
+.cchip.skip { background: #eef0f2; color: #9aa5b1; text-decoration: line-through; }
+.pvbg { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 3200; display: flex; justify-content: center; align-items: stretch; padding: 12px; }
+.pvphone { width: 100%; max-width: 400px; background: #f2f4f1; border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 8px 30px rgba(0,0,0,.4); border: 6px solid #1f2933; }
+.pvbar { display: flex; align-items: center; justify-content: space-between; background: #1f4e3d; color: #fff; padding: 10px 12px; font-size: 15px; }
+.pvx { border: 0; background: rgba(255,255,255,.18); color: #fff; border-radius: 10px; padding: 6px 10px; font-size: 14px; cursor: pointer; }
+.pvbody { flex: 1; overflow-y: auto; padding: 10px; }
+.pvsec { background: #fff; border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+.pvlabel { font-size: 12px; color: #fff; background: #1f7a4d; display: inline-block; border-radius: 8px; padding: 2px 8px; margin-bottom: 6px; }
+.pvname { font-size: 18px; color: #1f4e3d; margin: 0 0 8px; }
+.pvshort { margin: 8px 0; }
+.pvth { position: relative; width: 100%; background: #e4ece7 center / cover no-repeat; display: flex; align-items: center; justify-content: center; font-size: 40px; aspect-ratio: 9 / 16 !important; border-radius: 12px; cursor: pointer; max-height: 60vh; margin: 0 auto; }
+.pvplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,.55); color: #fff; width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.pvframe { width: 100%; aspect-ratio: 9 / 16; max-height: 60vh; border: 0; border-radius: 12px; background: #000; }
+.pvcap { font-size: 13px; color: #52606d; margin-top: 4px; }
+.pvphotos { display: flex; gap: 6px; overflow-x: auto; margin: 8px 0; scroll-snap-type: x mandatory; }
+.pvphotos img { height: 200px; border-radius: 10px; scroll-snap-align: start; cursor: pointer; flex: none; background: #e4ece7; }
+.pvdesc { font-size: 15px; line-height: 1.6; margin: 8px 0; }
+.pvtext { background: #fff8e1; border-left: 4px solid #f0c75e; border-radius: 8px; padding: 10px; margin: 8px 0; font-size: 15px; line-height: 1.6; white-space: pre-line; }
+.pvfind { font-size: 14px; color: #52606d; }
+.pvmiss { background: #fde8e8; color: #b42318; border-radius: 10px; padding: 10px; font-size: 14px; margin: 6px 0; }
+.pvnote { font-size: 13px; color: #52606d; margin: 0 0 8px; }
+.pvnext { text-align: center; color: #1f7a4d; font-weight: 700; font-size: 14px; margin: 2px 0 10px; }
 .cprev { width: 100%; max-height: 60vh; object-fit: contain; border-radius: 10px; background: #000; margin: 6px 0; }
 </style>
 </head>
@@ -1460,13 +1488,15 @@ function contentCourse(cno) {
   dropMap();
   api('cCourse', { no: cno }, function (r) {
     clear(); header(r.no + '코스 콘텐츠');
-    var c = card(el('h1', '', '🎬 ' + r.no + ' ' + noEx(r.name)), el('p', 'small', '걷는 순서대로입니다. [콘텐츠]를 누르면 그 포인트의 쇼츠·사진·안내문 상자가 열립니다.'));
+    app.appendChild(cCourseMap(r)); // 맨 위 코스 지도 상자 (2026-11-21 대표 요청)
+    var c = card(el('h1', '', '🎬 ' + r.no + ' ' + noEx(r.name)), el('p', 'small', '걷는 순서대로입니다. [콘텐츠]를 누르면 그 포인트의 쇼츠·사진·안내문 상자가 열립니다.'), cChipLegend(),
+      btn('👁 코스 미리보기', function () { cCoursePreview(r.no); }));
     if (!r.points.length) c.appendChild(el('p', 'small', '이 코스에 포인트가 없습니다.'));
     r.points.forEach(function (p, i) {
       var b = el('button', 'sw on', '콘텐츠'); b.onclick = function () { contentPoint(p.no, r.no); };
       var sub = '쇼츠 ' + p.cnt['쇼츠'] + '/3 · 사진 ' + p.cnt['사진'] + '/3 · 안내문 ' + p.cnt['안내문'] + '/3 · ' + p.stage;
       var rw = row((i + 1) + '. ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)'), sub, b);
-      if (p.chk) rw.querySelector('.l').appendChild(ckEl(p.chk));
+      if (p.chk) rw.querySelector('.l').appendChild(cChips(p.chk)); // (쇼츠1)(쇼츠2)… 칸마다 색
       c.appendChild(rw);
     });
     app.appendChild(c);
@@ -1531,6 +1561,7 @@ function contentPoint(no, cno) {
       el('p', 'small', '지나는 코스 ' + (r.courses.join('·') || '없음') + (r.courses.length > 1 ? ' (갈림길)' : '') + ' · 단계 ' + r.stage),
       el('div', 'chelp', '· 칸을 잡고 다른 칸 위에 놓으면 자리가 바뀝니다. 맨 앞 칸이 대표입니다.\n· 칸에 대고 오른쪽 마우스(휴대폰은 길게 누르기) → 대표로·삭제.\n· 빈 칸을 누르면 내 자료를 올립니다. 아래 공통 목록의 자료는 [넣기] 또는 빈 칸으로 끌어 넣습니다.'));
     top.lastChild.style.whiteSpace = 'pre-line';
+    top.appendChild(btn('👁 포인트 미리보기', function () { cPointPreview(r); }));
     app.appendChild(top);
     C_KINDS.forEach(function (k) { app.appendChild(cBoxCard(r, k[0], k[1])); });
     if (CP.cno) app.appendChild(btn('← ' + CP.cno + '코스 포인트 목록으로', function () { contentCourse(CP.cno); }));
@@ -1675,6 +1706,107 @@ function cAddDialog(kind, o) {
   box.appendChild(btn('취소', close, 'sub'));
   bg.appendChild(box); document.body.appendChild(bg);
   setTimeout(function () { ti.focus(); }, 50);
+}
+
+
+/* 콘텐츠 칸 표시: (쇼츠1)(쇼츠2)(쇼츠3) (사진1)… 칸마다 색 — 초록 붙음, 빨강 없음, 회색 안 씀 (2026-11-21 대표 요청) */
+var C_CHIP_TIP = { ok: '붙어 있음', no: '아직 없음', skip: '안 씀' };
+function cChips(chk) {
+  var d = el('div', 'cchips');
+  C_KINDS.forEach(function (k) {
+    var g = el('span', 'cgrp');
+    (chk || []).filter(function (c) { return c.g === k[0]; }).forEach(function (c) { var s = el('span', 'cchip ' + c.s, c.k.replace(' ', '')); s.title = C_CHIP_TIP[c.s]; g.appendChild(s); });
+    if (g.childNodes.length) d.appendChild(g);
+  });
+  return d;
+}
+function cChipLegend() {
+  var d = el('div', 'cchips small');
+  [['ok', '붙어 있음'], ['no', '아직 없음'], ['skip', '안 씀']].forEach(function (x) { d.appendChild(el('span', 'cchip ' + x[0], x[1])); });
+  return d;
+}
+function cMissN(chk) { return (chk || []).filter(function (c) { return c.g && c.s === 'no'; }).length; }
+/* 코스 지도 상자 */
+function cCourseMap(r) {
+  var md = el('div'); md.id = 'map';
+  var lg = el('div', 'legend'); [['#1f7a4d', '콘텐츠 다 붙음'], ['#e02424', '빨간 점 = 빠진 칸 있음'], ['sq', '네모 = 갈림길']].forEach(function (x) { var s = el('span', '', x[1]); var i = el('i', x[0] === 'sq' ? 'sq' : ''); if (x[0] !== 'sq') i.style.background = x[0]; s.insertBefore(i, s.firstChild); lg.appendChild(s); });
+  var c = card(el('h2', '', '🗺️ 코스 지도'), el('p', 'small', '포인트를 누르면 그 포인트의 콘텐츠 화면이 열립니다.'), md, lg, lineLegend(r.lines, r.no, false));
+  setTimeout(function () {
+    if (typeof L === 'undefined') { md.textContent = '지도를 불러오지 못했습니다.'; return; }
+    COURSE_ORDER = (r.lines || []).map(function (l) { return l.no; });
+    MAP = L.map(md);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap' }).addTo(MAP);
+    var by = {}, pos = {}; r.points.forEach(function (p) { by[p.no] = p; });
+    (r.order || []).forEach(function (n, i) { (pos[n] = pos[n] || []).push(i + 1); });
+    var line = []; (r.order || []).forEach(function (n) { var p = by[n]; if (p && p.lat !== null) line.push([p.lat, p.lng]); });
+    drawOtherLines(r.lines, r.no);
+    if (line.length > 1) L.polyline(line, { color: courseColor(r.no), weight: 6, opacity: 0.9 }).addTo(MAP);
+    r.points.forEach(function (p) {
+      if (p.lat === null) return;
+      var mi = cMissN(p.chk), cls = 'pin' + ((p.courses || []).length > 1 ? ' sq' : '') + (mi ? ' miss' : '');
+      var mk = L.marker([p.lat, p.lng], { icon: L.divIcon({ className: '', html: '<div class="' + cls + '">' + p.no + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(MAP);
+      mk.bindTooltip((pos[p.no] || []).join('·') + '번째 · ' + p.no + ' ' + (noEx(p.name) || '(이름 없음)') + (mi ? ' · 빠진 칸 ' + mi + '개' : ' · 다 붙음'));
+      mk.on('click', function () { contentPoint(p.no, r.no); });
+    });
+    if (line.length > 1) MAP.fitBounds(line, { padding: [40, 40] }); else if (line.length === 1) MAP.setView(line[0], 16); else MAP.setView(CHUN, 14);
+  }, 0);
+  return c;
+}
+/* ---------- 미리보기 (방문자 화면처럼 휴대폰 폭으로) ---------- */
+function pvOpen(title) {
+  var bg = el('div', 'pvbg'), ph = el('div', 'pvphone'), bar = el('div', 'pvbar', null, el('b', '', title)), body = el('div', 'pvbody');
+  var x = el('button', 'pvx', '닫기 ✕'); x.onclick = function () { if (bg.parentNode) bg.parentNode.removeChild(bg); };
+  bar.appendChild(x); ph.appendChild(bar); ph.appendChild(body); bg.appendChild(ph); document.body.appendChild(bg);
+  return body;
+}
+function pvShort(x) {
+  var w = el('div', 'pvshort');
+  if (x.missing) { w.appendChild(el('div', 'pvmiss', x.no + ' 창고에 없는 번호')); return w; }
+  var th = cThumb(x); th.className = 'th pvth'; th.appendChild(el('span', 'pvplay', '▶'));
+  var src = x.ytid ? 'https://www.youtube.com/embed/' + x.ytid + '?autoplay=1' : (x.fid ? 'https://drive.google.com/file/d/' + x.fid + '/preview' : '');
+  th.onclick = function () { if (!src) return; var f = el('iframe', 'pvframe'); f.src = src; f.allow = 'autoplay; encrypted-media'; f.setAttribute('allowfullscreen', ''); w.replaceChild(f, th); };
+  w.appendChild(th);
+  w.appendChild(el('div', 'pvcap', x.title + (x.yt ? '' : ' · 유튜브 주소 대기')));
+  return w;
+}
+function pvPoint(body, p, label) {
+  var sec = el('div', 'pvsec');
+  if (label) sec.appendChild(el('div', 'pvlabel', label));
+  sec.appendChild(el('h2', 'pvname', p.no + ' ' + (noEx(p.name) || '(이름 없음)')));
+  var bx = p.boxes || {}, sh = bx['쇼츠'] || [], ph = bx['사진'] || [], tx = bx['안내문'] || [];
+  if (!sh.length && !ph.length && !tx.length) sec.appendChild(el('div', 'pvmiss', '아직 붙은 콘텐츠가 없습니다.'));
+  sh.forEach(function (x) { sec.appendChild(pvShort(x)); });
+  if (ph.length) {
+    var row = el('div', 'pvphotos');
+    ph.forEach(function (x) {
+      if (x.missing || !x.fid) { row.appendChild(el('div', 'pvmiss', x.title || x.no)); return; }
+      var im = el('img'); im.src = 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(x.fid) + '&sz=w800'; im.alt = x.title || ''; im.onclick = function () { cPreview(x); }; row.appendChild(im);
+    });
+    sec.appendChild(row);
+  }
+  if (p.desc) sec.appendChild(el('p', 'pvdesc', noEx(p.desc)));
+  tx.forEach(function (x) { sec.appendChild(el('div', 'pvtext', x.missing ? x.no + ' 창고에 없는 번호' : x.text)); });
+  if (p.find) sec.appendChild(el('p', 'pvfind', '📍 찾는 법: ' + noEx(p.find)));
+  body.appendChild(sec);
+}
+function cPointPreview(r) {
+  var body = pvOpen('포인트 미리보기');
+  body.appendChild(el('p', 'pvnote', '이 포인트에 붙인 콘텐츠를 방문자 화면 폭으로 보여 줍니다. 순서는 상자의 칸 순서(맨 앞 = 대표)입니다.'));
+  pvPoint(body, r, '');
+}
+function cCoursePreview(cno) {
+  api('cCoursePreview', { no: cno }, function (r) {
+    var body = pvOpen(r.no + '코스 미리보기');
+    var hd = el('div', 'pvsec', null, el('h2', 'pvname', r.no + ' ' + noEx(r.name)));
+    hd.appendChild(el('p', 'pvnote', '포인트 ' + r.points.length + '곳' + (r.km ? ' · ' + r.km + 'km' : '') + (r.min ? ' · 약 ' + r.min + '분' : '') + ' · 걷는 순서대로 포인트마다 붙은 콘텐츠를 보여 줍니다.'));
+    if (r.desc) hd.appendChild(el('p', 'pvdesc', noEx(r.desc)));
+    body.appendChild(hd);
+    r.points.forEach(function (p, i) {
+      if (i > 0) body.appendChild(el('div', 'pvnext', '↓ 다음 포인트로 걷기'));
+      pvPoint(body, p, (i + 1) + '번째 포인트' + (i === r.points.length - 1 && i > 0 && p.no === r.points[0].no ? ' (시작으로 돌아옴)' : ''));
+    });
+    if (!r.points.length) body.appendChild(el('div', 'pvmiss', '이 코스에 포인트가 없습니다.'));
+  });
 }
 
 </script>
